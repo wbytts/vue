@@ -5,6 +5,7 @@ let uid = 0
 
 const pendingCleanupDeps: Dep[] = []
 
+// 清理依赖
 export const cleanupDeps = () => {
   for (let i = 0; i < pendingCleanupDeps.length; i++) {
     const dep = pendingCleanupDeps[i]
@@ -26,6 +27,7 @@ export interface DepTarget extends DebuggerOptions {
 /**
  * A dep is an observable that can have multiple
  * directives subscribing to it.
+ * 一个 dep 是一个可被多个指令订阅的可观察对象。
  * @internal
  */
 export default class Dep {

@@ -24,6 +24,7 @@ const NO_INIITIAL_VALUE = {}
 /**
  * In some cases we may want to disable observation inside a component's
  * update computation.
+ * 在某些情况下，我们可能希望在组件的更新计算中禁用观察。
  */
 export let shouldObserve: boolean = true
 
@@ -44,6 +45,8 @@ const mockDep = {
  * object. Once attached, the observer converts the target
  * object's property keys into getter/setters that
  * collect dependencies and dispatch updates.
+ * 一个观察者类，用于附加到每个被观察的对象上。
+ * 一旦被附加，观察者将目标对象的属性键转换为收集依赖项并分发更新的getter/setter。
  */
 export class Observer {
   dep: Dep
@@ -100,6 +103,7 @@ export class Observer {
  * Attempt to create an observer instance for a value,
  * returns the new observer if successfully observed,
  * or the existing observer if the value already has one.
+ * 尝试为一个值创建一个观察者实例，如果成功观察，则返回新的观察者，如果该值已经有观察者，则返回现有的观察者
  */
 export function observe(
   value: any,
@@ -124,6 +128,7 @@ export function observe(
 
 /**
  * Define a reactive property on an Object.
+ * 在对象上定义一个响应式属性
  */
 export function defineReactive(
   obj: object,
@@ -150,7 +155,10 @@ export function defineReactive(
     val = obj[key]
   }
 
+  // 不是 shallow 并且可观察
   let childOb = !shallow && observe(val, false, mock)
+
+  // 为对象定义属性
   Object.defineProperty(obj, key, {
     enumerable: true,
     configurable: true,
@@ -216,6 +224,7 @@ export function defineReactive(
  * Set a property on an object. Adds the new property and
  * triggers change notification if the property doesn't
  * already exist.
+ * 给对象设置一个属性。如果该属性不存在，则添加新属性并触发更改通知。
  */
 export function set<T>(array: T[], key: number, value: T): T
 export function set<T>(object: object, key: string | number, value: T): T
@@ -276,6 +285,7 @@ export function set(
 
 /**
  * Delete a property and trigger change if necessary.
+ * 删除一个属性并在必要时触发更改
  */
 export function del<T>(array: T[], key: number): void
 export function del(object: object, key: string | number): void
@@ -324,6 +334,7 @@ export function del(target: any[] | object, key: any) {
 /**
  * Collect dependencies on array elements when the array is touched, since
  * we cannot intercept array element access like property getters.
+ * 当访问数组时，收集数组元素的依赖项，因为我们无法像属性的getter方法那样拦截数组元素的访问。
  */
 function dependArray(value: Array<any>) {
   for (let e, i = 0, l = value.length; i < l; i++) {

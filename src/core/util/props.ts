@@ -60,6 +60,7 @@ export function validateProp(
 
 /**
  * Get the default value of a prop.
+ * 获取 prop 的默认值
  */
 function getPropDefaultValue(
   vm: Component | undefined,

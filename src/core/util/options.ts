@@ -81,7 +81,7 @@ function mergeData(
 }
 
 /**
- * Data
+ * 合并 data 选项/函数
  */
 export function mergeDataOrFn(
   parentVal: any,
@@ -150,6 +150,7 @@ strats.data = function (
 
 /**
  * Hooks and props are merged as arrays.
+ * 钩子函数（hooks）和属性（props）被合并为数组
  */
 export function mergeLifecycleHook(
   parentVal: Array<Function> | null,

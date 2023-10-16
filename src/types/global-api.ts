@@ -33,5 +33,6 @@ export interface GlobalAPI {
   observable: <T>(value: T) => T
 
   // allow dynamic method registration
+  // 允许动态方法注册
   [key: string]: any
 }
