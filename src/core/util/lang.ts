@@ -7,6 +7,7 @@ export const unicodeRegExp =
   /a-zA-Z\u00B7\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u037D\u037F-\u1FFF\u200C-\u200D\u203F-\u2040\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD/
 
 /**
+ * 检测字符串是否以 $ 或者 _ 开头
  * Check if a string starts with $ or _
  */
 export function isReserved(str: string): boolean {
@@ -15,6 +16,7 @@ export function isReserved(str: string): boolean {
 }
 
 /**
+ * 定义一个属性
  * Define a property.
  */
 export function def(obj: Object, key: string, val: any, enumerable?: boolean) {
@@ -27,6 +29,7 @@ export function def(obj: Object, key: string, val: any, enumerable?: boolean) {
 }
 
 /**
+ * 解析简单的路径
  * Parse simple path.
  */
 const bailRE = new RegExp(`[^${unicodeRegExp.source}.$_\\d]`)

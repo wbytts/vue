@@ -30,7 +30,9 @@ export function initGlobalAPI(Vue: GlobalAPI) {
   }
   Object.defineProperty(Vue, 'config', configDef)
 
+  // 暴露工具方法
   // exposed util methods.
+  // 注意：这些并没有作为公开API的一部分，不要使用他们，除非你意识到风险
   // NOTE: these are not considered part of the public API - avoid relying on
   // them unless you are aware of the risk.
   Vue.util = {
@@ -55,6 +57,7 @@ export function initGlobalAPI(Vue: GlobalAPI) {
     Vue.options[type + 's'] = Object.create(null)
   })
 
+  // 这段代码用于识别“基础”构造函数，以在Weex的多实例场景中扩展所有纯对象组件。
   // this is used to identify the "base" constructor to extend all plain-object
   // components with in Weex's multi-instance scenarios.
   Vue.options._base = Vue

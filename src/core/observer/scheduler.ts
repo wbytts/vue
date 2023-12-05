@@ -17,6 +17,7 @@ let flushing = false
 let index = 0
 
 /**
+ * 重置调度状态
  * Reset the scheduler's state.
  */
 function resetSchedulerState() {

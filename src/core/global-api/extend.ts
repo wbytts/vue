@@ -17,6 +17,7 @@ export function initExtend(Vue: GlobalAPI) {
   let cid = 1
 
   /**
+   * 类继承
    * Class inheritance
    */
   Vue.extend = function (extendOptions: any): typeof Component {
