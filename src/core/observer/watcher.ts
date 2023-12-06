@@ -33,6 +33,8 @@ export interface WatcherOptions extends DebuggerOptions {
 }
 
 /**
+ * watcher 解析一个表达式，收集依赖，并在表达式的值改变的时候触发回调
+ * 被用在 $watch 和 指令中
  * A watcher parses an expression, collects dependencies,
  * and fires callback when the expression value changes.
  * This is used for both the $watch() api and directives.

@@ -32,6 +32,7 @@ export function toggleObserving(value: boolean) {
   shouldObserve = value
 }
 
+// 服务端渲染 mock 依赖项
 // ssr mock dep
 const mockDep = {
   notify: noop,
@@ -75,6 +76,8 @@ export class Observer {
       }
     } else {
       /**
+       * 遍历所有的属性并且转换他们，变成 getter/setters
+       * 这种方法仅当他们是对象的时候才会被调用
        * Walk through all properties and convert them into
        * getter/setters. This method should only be called when
        * value type is Object.
@@ -88,6 +91,7 @@ export class Observer {
   }
 
   /**
+   * 对于数组的每一项应用
    * Observe a list of Array items.
    */
   observeArray(value: any[]) {
@@ -165,6 +169,7 @@ export function defineReactive(
     get: function reactiveGetter() {
       const value = getter ? getter.call(obj) : val
       if (Dep.target) {
+        // 当响应式数据被访问的时候，添加依赖
         if (__DEV__) {
           dep.depend({
             target: obj,
@@ -175,6 +180,7 @@ export function defineReactive(
           dep.depend()
         }
         if (childOb) {
+          // 不是 shallow 并且可观察，则继续处理
           childOb.dep.depend()
           if (isArray(value)) {
             dependArray(value)

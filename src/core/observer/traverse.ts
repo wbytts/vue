@@ -6,6 +6,7 @@ import { isRef } from '../../v3'
 const seenObjects = new Set()
 
 /**
+ * 描述了一个递归遍历对象的过程，以触发所有已转换的 getter 函数，从而收集对象内部的所有嵌套属性作为“深层”依赖项。
  * Recursively traverse an object to evoke all converted
  * getters, so that every nested property inside the object
  * is collected as a "deep" dependency.

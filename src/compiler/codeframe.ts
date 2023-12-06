@@ -13,9 +13,7 @@ export function generateCodeFrame(
     if (count >= start) {
       for (let j = i - range; j <= i + range || end > count; j++) {
         if (j < 0 || j >= lines.length) continue
-        res.push(
-          `${j + 1}${repeat(` `, 3 - String(j + 1).length)}|  ${lines[j]}`
-        )
+        res.push(`${j + 1}${repeat(` `, 3 - String(j + 1).length)}|  ${lines[j]}`)
         const lineLength = lines[j].length
         if (j === i) {
           // push underline

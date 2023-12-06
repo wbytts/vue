@@ -13,14 +13,23 @@ function Vue(options) {
   this._init(options)
 }
 
+// 初始化混入
 //@ts-expect-error Vue has function type
 initMixin(Vue)
+
+// 状态混入
 //@ts-expect-error Vue has function type
 stateMixin(Vue)
+
+// 事件混入
 //@ts-expect-error Vue has function type
 eventsMixin(Vue)
+
+// 生命周期混入
 //@ts-expect-error Vue has function type
 lifecycleMixin(Vue)
+
+// render混入
 //@ts-expect-error Vue has function type
 renderMixin(Vue)
 
