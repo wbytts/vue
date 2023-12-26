@@ -32,6 +32,7 @@ import {
 import type { Component } from 'types/component'
 import { shallowReactive, TrackOpTypes } from 'v3'
 
+// 用于存放 data，以及后续的 data改变
 const sharedPropertyDefinition = {
   enumerable: true,
   configurable: true,
@@ -46,6 +47,8 @@ export function proxy(target: Object, sourceKey: string, key: string) {
   sharedPropertyDefinition.set = function proxySetter(val) {
     this[sourceKey][key] = val
   }
+
+  // 对 target 的访问做了一层代理， 如 vm._data.xxx
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
@@ -143,6 +146,7 @@ function initData(vm: Component) {
         warn(`Method "${key}" has already been defined as a data property.`, vm)
       }
     }
+    // 如果 prop 和 data 定义重复了，则提出一个警告
     if (props && hasOwn(props, key)) {
       __DEV__ &&
         warn(

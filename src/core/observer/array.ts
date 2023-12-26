@@ -12,7 +12,7 @@ const arrayProto = Array.prototype
 // 创建数组原型的拷贝
 export const arrayMethods = Object.create(arrayProto)
 
-// 定义需要被拦截的数组方法名称
+// 需要被拦截的数组方法名称
 const methodsToPatch = [
   'push',
   'pop',
