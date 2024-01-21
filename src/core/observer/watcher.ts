@@ -147,6 +147,7 @@ export default class Watcher implements DepTarget {
     } finally {
       // "touch" every property so they are all tracked as
       // dependencies for deep watching
+      // 如果新建 Watcher 的时候有 deep 标记，则递归的跟踪每一个子属性
       if (this.deep) {
         traverse(value)
       }
