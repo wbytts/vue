@@ -178,6 +178,7 @@ export function getData(data: Function, vm: Component): any {
 
 const computedWatcherOptions = { lazy: true }
 
+// 初始化计算属性
 function initComputed(vm: Component, computed: Object) {
   // $flow-disable-line
   const watchers = (vm._computedWatchers = Object.create(null))

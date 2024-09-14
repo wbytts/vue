@@ -6,34 +6,66 @@ import type { VNodeComponentOptions, VNodeData } from 'types/vnode'
  * @internal
  */
 export default class VNode {
+  // 标签名
   tag?: string
+  // 数据data
   data: VNodeData | undefined
+  // 子节点VNode
   children?: Array<VNode> | null
+  // 文本
   text?: string
+  // VNode 对应的 DOM节点
   elm: Node | undefined
+
+  // 名称空间 namespace
   ns?: string
-  context?: Component // rendered in this component's scope
+
+  // rendered in this component's scope
+  // 渲染上下文（即在哪个组件内渲染的）
+  context?: Component
+
+  // 懂得都懂
   key: string | number | undefined
+
+  // 组件选项
   componentOptions?: VNodeComponentOptions
-  componentInstance?: Component // component instance
-  parent: VNode | undefined | null // component placeholder node
+  // component instance 组件实例
+  componentInstance?: Component
+  // 父 VNode (component placeholder node)
+  parent: VNode | undefined | null
 
   // strictly internal
-  raw: boolean // contains raw HTML? (server only)
-  isStatic: boolean // hoisted static node
-  isRootInsert: boolean // necessary for enter transition check
-  isComment: boolean // empty comment placeholder?
-  isCloned: boolean // is a cloned node?
-  isOnce: boolean // is a v-once node?
-  asyncFactory?: Function // async component factory function
+  // contains raw HTML? (server only)
+  raw: boolean
+  // hoisted static node
+  isStatic: boolean
+  // necessary for enter transition check
+  isRootInsert: boolean
+  // empty comment placeholder?
+  isComment: boolean
+
+  // 是否是一个克隆的节点
+  isCloned: boolean
+
+  // 是否被 v-once 标注
+  isOnce: boolean
+
+  // async component factory function
+  // 异步工厂函数（用来支持异步组件）
+  asyncFactory?: Function
   asyncMeta: Object | void
   isAsyncPlaceholder: boolean
   ssrContext?: Object | void
-  fnContext: Component | void // real context vm for functional nodes
-  fnOptions?: ComponentOptions | null // for SSR caching
-  devtoolsMeta?: Object | null // used to store functional render context for devtools
-  fnScopeId?: string | null // functional scope id support
-  isComponentRootElement?: boolean | null // for SSR directives
+  // real context vm for functional nodes
+  fnContext: Component | void
+  // for SSR caching
+  fnOptions?: ComponentOptions | null
+  // used to store functional render context for devtools
+  devtoolsMeta?: Object | null
+  // functional scope id support
+  fnScopeId?: string | null
+  // for SSR directives
+  isComponentRootElement?: boolean | null
 
   constructor(
     tag?: string,
@@ -70,6 +102,7 @@ export default class VNode {
     this.isAsyncPlaceholder = false
   }
 
+  // componentInstance 属性的只读别名
   // DEPRECATED: alias for componentInstance for backwards compat.
   /* istanbul ignore next */
   get child(): Component | void {

@@ -148,7 +148,7 @@ export default {
           : vnode.key
       if (cache[key]) {
         vnode.componentInstance = cache[key].componentInstance
-        // make current key freshest
+        // make current key freshest 使当前key对应的组件缓存变成新的
         remove(keys, key)
         keys.push(key)
       } else {

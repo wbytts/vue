@@ -33,6 +33,9 @@ export const emptyNode = new VNode('', {}, [])
 
 const hooks = ['create', 'activate', 'update', 'remove', 'destroy']
 
+/**
+ * 比较 a 和 b 是否是两个相同的 VNode
+ */
 function sameVnode(a, b) {
   return (
     a.key === b.key &&
@@ -45,6 +48,7 @@ function sameVnode(a, b) {
   )
 }
 
+// 是否具有相同的 input type
 function sameInputType(a, b) {
   if (a.tag !== 'input') return true
   let i

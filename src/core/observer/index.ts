@@ -274,7 +274,10 @@ export function set(
     target[key] = val
     return val
   }
+
+  // 定义响应式属性
   defineReactive(ob.value, key, val, undefined, ob.shallow, ob.mock)
+
   if (__DEV__) {
     ob.dep.notify({
       type: TriggerOpTypes.ADD,
@@ -284,6 +287,7 @@ export function set(
       oldValue: undefined
     })
   } else {
+    // 通知页面(或者其他依赖)去更新
     ob.dep.notify()
   }
   return val

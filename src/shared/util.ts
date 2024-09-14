@@ -8,20 +8,23 @@ export function isUndef(v: any): v is undefined | null {
   return v === undefined || v === null
 }
 
+// 是否有值（undefined 和 null 不算）
 export function isDef<T>(v: T): v is NonNullable<T> {
   return v !== undefined && v !== null
 }
 
+// 是否为真
 export function isTrue(v: any): boolean {
   return v === true
 }
 
+// 是否为假
 export function isFalse(v: any): boolean {
   return v === false
 }
 
 /**
- * Check if value is primitive.
+ * 检查一个值是否是 Primitive值
  */
 export function isPrimitive(value: any): boolean {
   return (
@@ -33,11 +36,13 @@ export function isPrimitive(value: any): boolean {
   )
 }
 
+// 是否是函数
 export function isFunction(value: any): value is (...args: any[]) => any {
   return typeof value === 'function'
 }
 
 /**
+ * 快速对象检查
  * Quick object check - this is primarily used to tell
  * objects from primitive values when we know the value
  * is a JSON-compliant type.
@@ -69,12 +74,16 @@ export function isRegExp(v: any): v is RegExp {
 
 /**
  * Check if val is a valid array index.
+ * 检查是否是一个合理的数组索引
  */
 export function isValidArrayIndex(val: any): boolean {
   const n = parseFloat(String(val))
   return n >= 0 && Math.floor(n) === n && isFinite(val)
 }
 
+/**
+ * 是否是一个 Promise
+ */
 export function isPromise(val: any): val is Promise<any> {
   return (
     isDef(val) &&
@@ -130,7 +139,7 @@ export const isBuiltInTag = makeMap('slot,component', true)
 export const isReservedAttribute = makeMap('key,ref,slot,slot-scope,is')
 
 /**
- * Remove an item from an array.
+ * 从数组中移除一项
  */
 export function remove(arr: Array<any>, item: any): Array<any> | void {
   const len = arr.length

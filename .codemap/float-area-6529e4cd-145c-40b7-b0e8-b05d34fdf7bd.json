@@ -1,0 +1,681 @@
+{
+  "type": "float-area",
+  "_widgets": [
+    [
+      {
+        "widget": {
+          "constructionOptions": {
+            "factoryId": "code-editor-opener",
+            "options": {
+              "kind": "navigatable",
+              "uri": "file:///d%3A/projects/my-github/ym_vue/src/core/index.ts",
+              "floatAreaId": "6529e4cd-145c-40b7-b0e8-b05d34fdf7bd"
+            }
+          },
+          "innerWidgetState": {
+            "cursorState": [
+              {
+                "inSelectionMode": false,
+                "selectionStart": {
+                  "lineNumber": 11,
+                  "column": 3
+                },
+                "position": {
+                  "lineNumber": 11,
+                  "column": 3
+                }
+              }
+            ],
+            "viewState": {
+              "scrollLeft": 0,
+              "firstPosition": {
+                "lineNumber": 1,
+                "column": 1
+              },
+              "firstPositionDeltaTop": 0
+            },
+            "contributionsState": {
+              "editor.contrib.folding": {
+                "lineCount": 28,
+                "provider": "syntax",
+                "foldedImports": false
+              },
+              "editor.contrib.wordHighlighter": false
+            }
+          }
+        },
+        "width": 600,
+        "height": 450,
+        "spacing": 0
+      },
+      {
+        "widget": {
+          "constructionOptions": {
+            "factoryId": "code-editor-opener",
+            "options": {
+              "kind": "navigatable",
+              "uri": "file:///d%3A/projects/my-github/ym_vue/src/core/global-api/assets.ts",
+              "floatAreaId": "6529e4cd-145c-40b7-b0e8-b05d34fdf7bd"
+            }
+          },
+          "innerWidgetState": {
+            "cursorState": [
+              {
+                "inSelectionMode": false,
+                "selectionStart": {
+                  "lineNumber": 16,
+                  "column": 25
+                },
+                "position": {
+                  "lineNumber": 16,
+                  "column": 25
+                }
+              }
+            ],
+            "viewState": {
+              "scrollLeft": 0,
+              "firstPosition": {
+                "lineNumber": 1,
+                "column": 1
+              },
+              "firstPositionDeltaTop": 0
+            },
+            "contributionsState": {
+              "editor.contrib.folding": {
+                "lineCount": 37,
+                "provider": "syntax",
+                "foldedImports": false
+              },
+              "editor.contrib.wordHighlighter": false
+            }
+          }
+        },
+        "width": 600,
+        "height": 696.2400060117188,
+        "spacing": 0
+      },
+      {
+        "widget": {
+          "constructionOptions": {
+            "factoryId": "code-editor-opener",
+            "options": {
+              "kind": "navigatable",
+              "uri": "file:///d%3A/projects/my-github/ym_vue/src/core/observer/watcher.ts",
+              "floatAreaId": "6529e4cd-145c-40b7-b0e8-b05d34fdf7bd"
+            }
+          },
+          "innerWidgetState": {
+            "cursorState": [
+              {
+                "inSelectionMode": false,
+                "selectionStart": {
+                  "lineNumber": 152,
+                  "column": 13
+                },
+                "position": {
+                  "lineNumber": 152,
+                  "column": 13
+                }
+              }
+            ],
+            "viewState": {
+              "scrollLeft": 0,
+              "firstPosition": {
+                "lineNumber": 132,
+                "column": 1
+              },
+              "firstPositionDeltaTop": -11
+            },
+            "contributionsState": {
+              "editor.contrib.folding": {
+                "lineCount": 282,
+                "provider": "syntax",
+                "foldedImports": false
+              },
+              "editor.contrib.wordHighlighter": true
+            }
+          }
+        },
+        "width": 600,
+        "height": 450,
+        "spacing": 0
+      }
+    ],
+    [
+      {
+        "widget": {
+          "constructionOptions": {
+            "factoryId": "code-editor-opener",
+            "options": {
+              "kind": "navigatable",
+              "uri": "file:///d%3A/projects/my-github/ym_vue/src/core/global-api/index.ts",
+              "floatAreaId": "6529e4cd-145c-40b7-b0e8-b05d34fdf7bd"
+            }
+          },
+          "innerWidgetState": {
+            "cursorState": [
+              {
+                "inSelectionMode": false,
+                "selectionStart": {
+                  "lineNumber": 33,
+                  "column": 12
+                },
+                "position": {
+                  "lineNumber": 33,
+                  "column": 12
+                }
+              }
+            ],
+            "viewState": {
+              "scrollLeft": 0,
+              "firstPosition": {
+                "lineNumber": 1,
+                "column": 1
+              },
+              "firstPositionDeltaTop": 0
+            },
+            "contributionsState": {
+              "editor.contrib.folding": {
+                "lineCount": 72,
+                "provider": "syntax",
+                "foldedImports": false
+              },
+              "editor.contrib.wordHighlighter": false
+            }
+          }
+        },
+        "width": 725.2819575305864,
+        "height": 648.6429616358914,
+        "spacing": 0
+      },
+      {
+        "widget": {
+          "constructionOptions": {
+            "factoryId": "code-editor-opener",
+            "options": {
+              "kind": "navigatable",
+              "uri": "file:///d%3A/projects/my-github/ym_vue/src/core/observer/traverse.ts",
+              "floatAreaId": "6529e4cd-145c-40b7-b0e8-b05d34fdf7bd"
+            }
+          },
+          "innerWidgetState": {
+            "cursorState": [
+              {
+                "inSelectionMode": false,
+                "selectionStart": {
+                  "lineNumber": 14,
+                  "column": 17
+                },
+                "position": {
+                  "lineNumber": 14,
+                  "column": 17
+                }
+              }
+            ],
+            "viewState": {
+              "scrollLeft": 0,
+              "firstPosition": {
+                "lineNumber": 14,
+                "column": 1
+              },
+              "firstPositionDeltaTop": 0
+            },
+            "contributionsState": {
+              "editor.contrib.folding": {
+                "lineCount": 49,
+                "provider": "syntax",
+                "foldedImports": false
+              },
+              "editor.contrib.wordHighlighter": false
+            }
+          }
+        },
+        "width": 725.2819575305864,
+        "height": 450,
+        "spacing": 0
+      },
+      {
+        "widget": {
+          "constructionOptions": {
+            "factoryId": "code-editor-opener",
+            "options": {
+              "kind": "navigatable",
+              "uri": "file:///d%3A/projects/my-github/ym_vue/src/core/observer/index.ts",
+              "floatAreaId": "6529e4cd-145c-40b7-b0e8-b05d34fdf7bd"
+            }
+          },
+          "innerWidgetState": {
+            "cursorState": [
+              {
+                "inSelectionMode": false,
+                "selectionStart": {
+                  "lineNumber": 145,
+                  "column": 21
+                },
+                "position": {
+                  "lineNumber": 145,
+                  "column": 21
+                }
+              }
+            ],
+            "viewState": {
+              "scrollLeft": 0,
+              "firstPosition": {
+                "lineNumber": 139,
+                "column": 1
+              },
+              "firstPositionDeltaTop": -1
+            },
+            "contributionsState": {
+              "editor.contrib.folding": {
+                "lineCount": 360,
+                "provider": "syntax",
+                "foldedImports": false
+              },
+              "editor.contrib.wordHighlighter": true
+            }
+          }
+        },
+        "width": 725.2819575305864,
+        "height": 920.770601614882,
+        "spacing": 0
+      }
+    ],
+    [
+      {
+        "widget": {
+          "constructionOptions": {
+            "factoryId": "code-editor-opener",
+            "options": {
+              "kind": "navigatable",
+              "uri": "file:///d%3A/projects/my-github/ym_vue/src/core/util/index.ts",
+              "floatAreaId": "6529e4cd-145c-40b7-b0e8-b05d34fdf7bd"
+            }
+          },
+          "innerWidgetState": {
+            "cursorState": [
+              {
+                "inSelectionMode": false,
+                "selectionStart": {
+                  "lineNumber": 10,
+                  "column": 1
+                },
+                "position": {
+                  "lineNumber": 10,
+                  "column": 1
+                }
+              }
+            ],
+            "viewState": {
+              "scrollLeft": 0,
+              "firstPosition": {
+                "lineNumber": 1,
+                "column": 1
+              },
+              "firstPositionDeltaTop": 0
+            },
+            "contributionsState": {
+              "editor.contrib.folding": {
+                "lineCount": 10,
+                "provider": "syntax",
+                "foldedImports": false
+              },
+              "editor.contrib.wordHighlighter": false
+            }
+          }
+        },
+        "width": 600,
+        "height": 450,
+        "spacing": 0
+      },
+      {
+        "widget": {
+          "constructionOptions": {
+            "factoryId": "code-editor-opener",
+            "options": {
+              "kind": "navigatable",
+              "uri": "file:///d%3A/projects/my-github/ym_vue/src/core/observer/dep.ts",
+              "floatAreaId": "6529e4cd-145c-40b7-b0e8-b05d34fdf7bd"
+            }
+          },
+          "innerWidgetState": {
+            "cursorState": [
+              {
+                "inSelectionMode": false,
+                "selectionStart": {
+                  "lineNumber": 102,
+                  "column": 17
+                },
+                "position": {
+                  "lineNumber": 102,
+                  "column": 17
+                }
+              }
+            ],
+            "viewState": {
+              "scrollLeft": 0,
+              "firstPosition": {
+                "lineNumber": 73,
+                "column": 1
+              },
+              "firstPositionDeltaTop": -7
+            },
+            "contributionsState": {
+              "editor.contrib.folding": {
+                "lineCount": 111,
+                "provider": "syntax",
+                "foldedImports": false
+              },
+              "editor.contrib.wordHighlighter": false
+            }
+          }
+        },
+        "width": 600,
+        "height": 1136.8800670781316,
+        "spacing": 0
+      }
+    ],
+    [
+      {
+        "widget": {
+          "constructionOptions": {
+            "factoryId": "code-editor-opener",
+            "options": {
+              "kind": "navigatable",
+              "uri": "file:///d%3A/projects/my-github/ym_vue/src/shared/util.ts",
+              "floatAreaId": "6529e4cd-145c-40b7-b0e8-b05d34fdf7bd"
+            }
+          },
+          "innerWidgetState": {
+            "cursorState": [
+              {
+                "inSelectionMode": false,
+                "selectionStart": {
+                  "lineNumber": 155,
+                  "column": 17
+                },
+                "position": {
+                  "lineNumber": 155,
+                  "column": 17
+                }
+              }
+            ],
+            "viewState": {
+              "scrollLeft": 41,
+              "firstPosition": {
+                "lineNumber": 155,
+                "column": 1
+              },
+              "firstPositionDeltaTop": 0
+            },
+            "contributionsState": {
+              "editor.contrib.folding": {
+                "lineCount": 374,
+                "provider": "syntax",
+                "foldedImports": false
+              },
+              "editor.contrib.wordHighlighter": false
+            }
+          }
+        },
+        "width": 600,
+        "height": 450,
+        "spacing": 0
+      },
+      {
+        "widget": {
+          "constructionOptions": {
+            "factoryId": "code-editor-opener",
+            "options": {
+              "kind": "navigatable",
+              "uri": "file:///d%3A/projects/my-github/ym_vue/src/core/util/next-tick.ts",
+              "floatAreaId": "6529e4cd-145c-40b7-b0e8-b05d34fdf7bd"
+            }
+          },
+          "innerWidgetState": {
+            "cursorState": [
+              {
+                "inSelectionMode": false,
+                "selectionStart": {
+                  "lineNumber": 9,
+                  "column": 11
+                },
+                "position": {
+                  "lineNumber": 9,
+                  "column": 11
+                }
+              }
+            ],
+            "viewState": {
+              "scrollLeft": 0,
+              "firstPosition": {
+                "lineNumber": 16,
+                "column": 1
+              },
+              "firstPositionDeltaTop": -15
+            },
+            "contributionsState": {
+              "editor.contrib.folding": {
+                "lineCount": 118,
+                "provider": "syntax",
+                "foldedImports": false
+              },
+              "editor.contrib.wordHighlighter": true
+            }
+          }
+        },
+        "width": 600,
+        "height": 442.79999929687494,
+        "spacing": 0
+      }
+    ]
+  ],
+  "_widths": [
+    600,
+    725.2819575305864,
+    600,
+    600
+  ],
+  "_modelData": {
+    "connections": [
+      {
+        "startWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/platforms/web/entry-runtime.ts",
+          "lineNumber": 1,
+          "startColumn": 8,
+          "endColumn": 11,
+          "word": "Vue",
+          "x": 133,
+          "y": 60,
+          "hide": false,
+          "height": 19,
+          "width": 23
+        },
+        "endWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/instance/index.ts",
+          "lineNumber": 59,
+          "startColumn": 1,
+          "endColumn": 43,
+          "endLineNumber": 59,
+          "word": "",
+          "x": 735,
+          "y": 60,
+          "hide": false,
+          "height": 19,
+          "width": 323
+        },
+        "id": "238f0af4-7753-4804-b7ab-892187bda338"
+      },
+      {
+        "startWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/index.ts",
+          "lineNumber": 7,
+          "startColumn": 1,
+          "endColumn": 14,
+          "word": "initGlobalAPI",
+          "x": 79.0000146484375,
+          "y": 173.99999908447265,
+          "hide": false,
+          "height": 19,
+          "width": 99.99999999999999
+        },
+        "endWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/global-api/index.ts",
+          "lineNumber": 20,
+          "startColumn": 17,
+          "endColumn": 30,
+          "endLineNumber": 20,
+          "word": "",
+          "x": 858.0000390624999,
+          "y": 420.9999990844726,
+          "hide": false,
+          "height": 19,
+          "width": 100
+        },
+        "id": "f6a31d52-edb7-4b8f-8164-5482f015a25f"
+      },
+      {
+        "startWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/global-api/index.ts",
+          "lineNumber": 17,
+          "startColumn": 17,
+          "endColumn": 22,
+          "word": "index",
+          "x": 858.0000390624999,
+          "y": 363.9999990844726,
+          "hide": false,
+          "height": 19,
+          "width": 39
+        },
+        "endWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/util/index.ts",
+          "lineNumber": 1,
+          "startColumn": 1,
+          "endColumn": 1,
+          "endLineNumber": 10,
+          "word": "",
+          "x": 1516.2812499999998,
+          "y": 59.99999908447265,
+          "hide": false,
+          "height": 19,
+          "width": 1
+        },
+        "id": "19705b0b-6aaf-4680-9c52-74472fa6244b"
+      },
+      {
+        "startWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/util/index.ts",
+          "lineNumber": 8,
+          "startColumn": 18,
+          "endColumn": 22,
+          "word": "next",
+          "x": 1647.2812499999998,
+          "y": 192.99999908447265,
+          "hide": false,
+          "height": 19,
+          "width": 31
+        },
+        "endWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/util/next-tick.ts",
+          "lineNumber": 3,
+          "startColumn": 1,
+          "endColumn": 1,
+          "endLineNumber": 118,
+          "word": "",
+          "x": 2172.2812304687495,
+          "y": 565.99998046875,
+          "hide": true,
+          "height": 1,
+          "width": 1
+        },
+        "id": "2967329e-0fba-4816-a04d-ad5f5c043f1e"
+      },
+      {
+        "startWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/observer/index.ts",
+          "lineNumber": 145,
+          "startColumn": 19,
+          "endColumn": 22,
+          "word": "Dep",
+          "x": 874.0000390624999,
+          "y": 1383.6406542968748,
+          "hide": false,
+          "height": 19,
+          "width": 23
+        },
+        "endWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/observer/dep.ts",
+          "lineNumber": 40,
+          "startColumn": 3,
+          "endColumn": 4,
+          "endLineNumber": 43,
+          "word": "",
+          "x": 1516.2812499999998,
+          "y": 565.99998046875,
+          "hide": true,
+          "height": 1,
+          "width": 1
+        },
+        "id": "254e227a-6ca5-4b61-8d54-fd388df2387c"
+      },
+      {
+        "startWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/observer/watcher.ts",
+          "lineNumber": 136,
+          "startColumn": 5,
+          "endColumn": 15,
+          "word": "pushTarget",
+          "x": 110.0000146484375,
+          "y": 1383.2343945312498,
+          "hide": false,
+          "height": 19,
+          "width": 76.99999999999999
+        },
+        "endWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/observer/dep.ts",
+          "lineNumber": 102,
+          "startColumn": 17,
+          "endColumn": 27,
+          "endLineNumber": 102,
+          "word": "",
+          "x": 1639.2812499999998,
+          "y": 1109.99998046875,
+          "hide": false,
+          "height": 19,
+          "width": 77
+        },
+        "id": "72863004-c6d4-42c6-8819-5edaf38162f5"
+      },
+      {
+        "startWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/observer/watcher.ts",
+          "lineNumber": 152,
+          "startColumn": 9,
+          "endColumn": 17,
+          "word": "traverse",
+          "x": 141.00001464843749,
+          "y": 1687.2343945312498,
+          "hide": false,
+          "height": 19,
+          "width": 61
+        },
+        "endWord": {
+          "uri": "/d:/projects/my-github/ym_vue/src/core/observer/traverse.ts",
+          "lineNumber": 14,
+          "startColumn": 17,
+          "endColumn": 25,
+          "endLineNumber": 14,
+          "word": "",
+          "x": 858.0000390624999,
+          "y": 764.6406152343749,
+          "hide": false,
+          "height": 19,
+          "width": 62
+        },
+        "id": "0ec34135-ef07-4ee6-b11a-15fe050f04be"
+      }
+    ],
+    "annotations": [],
+    "highlights": []
+  }
+}
