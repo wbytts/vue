@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>012 · lazy watcher（computed 的内核）</title>
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    .stat {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      background: #f0f0f0;
+      margin-right: 8px;
+      font-family: Menlo, Consolas, monospace;
+    }
+    .stat b { color: #1677ff; font-size: 16px; }
+    .computed-stat b { color: #722ed1; }
+  </style>
+</head>
+<body>
+
+<h1>⑫ lazy watcher（computed 的内核）</h1>
+<p class="intro">
+  到 011 为止的 watcher 都是<b>立即求值 + 立即响应</b>的。<br>
+  但 <code>computed</code> 应该是另一种语义：<br>
+  &nbsp;&nbsp;• <b>按需</b>：第一次被读取时才计算；<br>
+  &nbsp;&nbsp;• <b>缓存</b>：依赖没变时多次读取只算一次；<br>
+  &nbsp;&nbsp;• <b>响应</b>：依赖变时让"读它的 watcher"知道。<br>
+  <br>
+  实现这个不需要新写一个类——只要给 Watcher 加两个开关：<br>
+  &nbsp;&nbsp;• <code>lazy: true</code>——构造时不立即 <code>get()</code>；<br>
+  &nbsp;&nbsp;• <code>dirty</code> 标志位——脏了才会在下次访问时重算。
+</p>
+
+<div class="panel">
+  <h2>① 视图区</h2>
+  <div>
+    <span class="stat">firstName = <b id="vfirst">-</b></span>
+    <span class="stat">lastName = <b id="vlast">-</b></span>
+    <span class="stat">count = <b id="vcount">-</b></span>
+  </div>
+  <div style="margin-top:8px">
+    <span class="stat computed-stat">computed fullName = <b id="vfull">-</b></span>
+  </div>
+  <div style="margin-top:12px">
+    <span class="stat">render 次数：<b id="renderCount">0</b></span>
+    <span class="stat computed-stat">computed 实际计算次数：<b id="computedCount">0</b></span>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>② 操作区</h2>
+  <p class="intro" style="margin-top:0">
+    重点观察：<br>
+    &nbsp;&nbsp;• 修改 firstName/lastName：computed 计算 +1，render 也 +1；<br>
+    &nbsp;&nbsp;• 修改 count（fullName 不依赖它）：render 会被触发（因为我们 render 里也读了 count），但 <b>computed 不会重算</b>。<br>
+    &nbsp;&nbsp;• 多次点"读 fullName"：依赖没变时只算一次（缓存生效）。
+  </p>
+  <div class="actions">
+    <button onclick="data.firstName = (data.firstName === 'Alice' ? 'Bob' : 'Alice')">切换 firstName</button>
+    <button onclick="data.lastName = (data.lastName === 'Wang' ? 'Li' : 'Wang')">切换 lastName</button>
+    <button onclick="data.count++">count++（fullName 不依赖）</button>
+    <button onclick="readFullName()">手动读一次 fullName（看是否走缓存）</button>
+    <button onclick="resetCounters()">重置计数</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>③ 日志
+    <button class="clear-btn" onclick="clearLog()">清空</button>
+  </h2>
+  <div id="log"></div>
+</div>
+
+<div class="note good">
+  <b>三个关键点：</b><br>
+  &nbsp;&nbsp;1. <b>lazy 构造</b>：<code>this.value = this.lazy ? undefined : this.get()</code>——lazy 不立即跑；<br>
+  &nbsp;&nbsp;2. <b>dirty 通道</b>：<code>update()</code> 时若 lazy，只设 <code>dirty = true</code>；<br>
+  &nbsp;&nbsp;3. <b>访问触发求值</b>：在 computed getter 里<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;• 若 <code>dirty</code> 则 <code>evaluate()</code>（跑一遍 fn 拿值，dirty 置 false）；<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;• 若<b>外层有 Dep.target</b>（render-watcher 正在求值），调 <code>this.depend()</code>——把<b>自己的所有 deps</b>也让外层 watcher 订阅。<br>
+  这第三步是让 computed 能"传染"响应性的关键：render-watcher 借此和真正的源数据建立了联系。
+</div>
+<div class="note next">
+  <b>下一篇 013 ➜</b> deep watch：用 traverse 递归触发对象内部所有 getter，建立"深层"依赖。
+</div>
+
+<div class="nav">
+  <a href="./011-cleanupDeps 依赖增量 diff.html">← 上一篇 011 · cleanupDeps</a>
+  <a href="./013-deep watch 与 traverse.html">下一篇 013 · deep watch →</a>
+</div>
+
+<script src="./utils.js"></script>
+<script>
+  // ============================================================
+  //  Dep / observe / defineReactive（最简）
+  // ============================================================
+  let depUid = 0
+  class Dep {
+    constructor(name) { this.id = ++depUid; this.name = name; this.subs = [] }
+    depend() { if (Dep.target) Dep.target.addDep(this) }
+    addSub(w) { if (!this.subs.includes(w)) this.subs.push(w) }
+    notify() { this.subs.slice().forEach(w => w.update()) }
+  }
+  Dep.target = null
+  const targetStack = []
+  function pushTarget(w) { targetStack.push(w); Dep.target = w }
+  function popTarget() { targetStack.pop(); Dep.target = targetStack[targetStack.length - 1] || null }
+
+  function observe(v) {
+    if (!v || typeof v !== 'object') return
+    Object.keys(v).forEach(k => defineReactive(v, k))
+  }
+  function defineReactive(obj, key) {
+    let val = obj[key]
+    const dep = new Dep(key)
+    Object.defineProperty(obj, key, {
+      enumerable: true, configurable: true,
+      get() { dep.depend(); return val },
+      set(newVal) { if (newVal === val) return; val = newVal; dep.notify() }
+    })
+  }
+
+  // ============================================================
+  //  ★ Watcher：增加 lazy 开关
+  // ============================================================
+  let watcherUid = 0
+  class Watcher {
+    constructor(fn, name, options = {}) {
+      this.id = ++watcherUid
+      this.name = name
+      this.fn = fn
+      this.deps = []
+      this.lazy = !!options.lazy
+      this.dirty = this.lazy           // ★ lazy 的初始就是脏的
+      this.value = this.lazy ? undefined : this.get()
+    }
+    addDep(d) { if (!this.deps.includes(d)) { this.deps.push(d); d.addSub(this) } }
+    get() {
+      pushTarget(this)
+      let value
+      try { value = this.fn() } finally { popTarget() }
+      return value
+    }
+    update() {
+      if (this.lazy) {
+        // ★ lazy：仅置脏，不立刻跑
+        this.dirty = true
+        log('info', `lazy watcher#${this.id}[${this.name}] 标记为 dirty`)
+      } else {
+        log('update', `watcher#${this.id}[${this.name}] update`)
+        this.run()
+      }
+    }
+    run() { this.value = this.get() }
+
+    // ★ 外部通过这个拿值：若脏则重算，否则直接读缓存
+    evaluate() {
+      this.value = this.get()
+      this.dirty = false
+      log('info', `lazy watcher#${this.id}[${this.name}] evaluate 重算 -> ${this.value}`)
+    }
+    // ★ 让外层 watcher 也订阅"我的"所有 dep
+    depend() {
+      this.deps.forEach(d => d.depend())
+    }
+  }
+
+  // ============================================================
+  //  ★ defineComputed：把一个 lazy watcher 暴露成访问式属性
+  // ============================================================
+  function defineComputed(obj, key, fn) {
+    const watcher = new Watcher(fn, `computed:${key}`, { lazy: true })
+    Object.defineProperty(obj, key, {
+      enumerable: true, configurable: true,
+      get() {
+        if (watcher.dirty) watcher.evaluate()
+        // 让"正在求值的外层 watcher"也订阅 computed 的依赖源
+        if (Dep.target) watcher.depend()
+        return watcher.value
+      }
+    })
+  }
+
+  // ============================================================
+  //  使用
+  // ============================================================
+  const data = { firstName: 'Alice', lastName: 'Wang', count: 0 }
+  observe(data)
+
+  // 计数：computed 实际被求值的次数
+  let computedCount = 0
+  defineComputed(data, 'fullName', () => {
+    computedCount++
+    document.getElementById('computedCount').textContent = computedCount
+    log('trigger', `★ fullName fn 被执行（第 ${computedCount} 次）`)
+    return data.firstName + ' ' + data.lastName
+  })
+
+  // render watcher：读 firstName / lastName / count / fullName
+  let renderCount = 0
+  new Watcher(() => {
+    renderCount++
+    document.getElementById('vfirst').textContent = data.firstName
+    document.getElementById('vlast').textContent = data.lastName
+    document.getElementById('vcount').textContent = data.count
+    document.getElementById('vfull').textContent = data.fullName
+    document.getElementById('renderCount').textContent = renderCount
+    log('update', `render 第 ${renderCount} 次执行`)
+  }, 'render')
+
+  function readFullName() {
+    log('info', `── 手动读 data.fullName，当前 dirty=${false} ──`)
+    const v = data.fullName
+    log('info', `── 读到 ${v} ──`)
+  }
+
+  function resetCounters() {
+    computedCount = renderCount = 0
+    document.getElementById('renderCount').textContent = 0
+    document.getElementById('computedCount').textContent = 0
+  }
+
+  window.data = data
+  window.readFullName = readFullName
+  window.resetCounters = resetCounters
+</script>
+
+</body>
+</html>

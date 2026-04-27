@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>007 · 完整模型：observe 递归与多 watcher 协作</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<h1>⑦ 完整模型：observe 递归 + 嵌套对象 + targetStack</h1>
+<p class="intro">
+  把前 6 步整合，并补齐两个关键细节：<br>
+  &nbsp;&nbsp;1. <b>observe 递归</b>：对象属性如果还是对象，继续往里劫持；<br>
+  &nbsp;&nbsp;2. <b>targetStack</b>：<code>Dep.target</code> 用栈管理，支持 watcher 嵌套求值。<br>
+  到这一步，你写的代码已经非常接近 Vue 2 源码 <code>src/core/observer/</code> 的核心结构了。
+</p>
+
+<div class="panel">
+  <h2>① 视图区（数据结构有嵌套）</h2>
+  <div class="display">
+    <div><strong>姓名：</strong><span id="name"></span></div>
+    <div><strong>年龄：</strong><span id="age"></span></div>
+  </div>
+  <div class="display" style="margin-top:8px">
+    <div><strong>地址：</strong><span id="addr"></span></div>
+    <div><strong>邮编：</strong><span id="zip"></span></div>
+  </div>
+  <div class="display" style="margin-top:8px">
+    <div><strong>简介：</strong><span id="intro-line"></span></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>② 操作区（包括嵌套属性）</h2>
+  <div class="actions">
+    <button onclick="data.user.name = 'Alice'">user.name = 'Alice'</button>
+    <button onclick="data.user.name = 'Bob'">user.name = 'Bob'</button>
+    <button onclick="data.user.age++">user.age++</button>
+    <button onclick="data.address.city = '北京'">address.city = '北京'</button>
+    <button onclick="data.address.city = '上海'">address.city = '上海'</button>
+    <button onclick="data.address.zip = String(Math.floor(Math.random()*900000+100000))">随机邮编</button>
+    <button onclick="data.address = { city: '深圳', zip: '518000' }">整个 address 对象替换</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>③ 日志
+    <button class="clear-btn" onclick="clearLog()">清空</button>
+  </h2>
+  <div id="log"></div>
+</div>
+
+<div class="note good">
+  <b>新增的两点：</b><br>
+  &nbsp;&nbsp;• <code>defineReactive</code> 内部调用 <code>observe(val)</code>——新值若还是对象，递归劫持；<br>
+  &nbsp;&nbsp;• <code>pushTarget</code>/<code>popTarget</code> 用栈维护 <code>Dep.target</code>——一个 watcher 在求值时如果触发另一个 watcher 创建/求值，旧 target 不会丢。<br>
+  这个最小实现已具备：自动依赖收集、嵌套对象、可替换子对象、多 watcher 共存。
+</div>
+<div class="note next">
+  <b>对照 Vue 源码：</b>本例的 100 多行代码基本对应：<br>
+  &nbsp;&nbsp;• <code>src/core/observer/index.ts</code> 的 <code>Observer</code> / <code>defineReactive</code> / <code>observe</code><br>
+  &nbsp;&nbsp;• <code>src/core/observer/dep.ts</code> 的 <code>Dep</code> 类<br>
+  &nbsp;&nbsp;• <code>src/core/observer/watcher.ts</code> 的 <code>Watcher</code> 类（去除了 lazy/sync/queue/cleanup 等工程优化）<br>
+  <b>但还有不少 Vue 实际特性没演示</b>，从 008 开始继续补：<br>
+  &nbsp;&nbsp;• 008 数组方法重写（defineProperty 监听不到 push/pop/索引）<br>
+  &nbsp;&nbsp;• 009 <code>$set</code> / <code>$delete</code>（新增删除属性）<br>
+  &nbsp;&nbsp;• 010 异步更新调度（同 tick 多次修改只渲染一次）<br>
+  &nbsp;&nbsp;• 011 cleanupDeps 依赖增量 diff（v-if 切换分支时清理旧依赖）<br>
+  &nbsp;&nbsp;• 012 lazy watcher（computed 的内核）<br>
+  &nbsp;&nbsp;• 013 deep watch（traverse 递归触发深层 getter）
+</div>
+
+<div class="nav">
+  <a href="./006-Watcher 封装观察者.html">← 上一篇 006 · Watcher 封装</a>
+  <a href="./008-数组的响应式.html">下一篇 008 · 数组的响应式 →</a>
+</div>
+
+<script src="./utils.js"></script>
+<script>
+  // ============================================================
+  //  Dep
+  // ============================================================
+  let depUid = 0
+  class Dep {
+    constructor(name) {
+      this.id = ++depUid
+      this.name = name
+      this.subs = []
+    }
+    depend() {
+      if (Dep.target) Dep.target.addDep(this)
+    }
+    addSub(watcher) {
+      if (!this.subs.includes(watcher)) {
+        this.subs.push(watcher)
+        log('track', `dep[${this.name}] +1 watcher#${watcher.id}`)
+      }
+    }
+    notify() {
+      log('trigger', `dep[${this.name}] 通知 ${this.subs.length} 个 watcher`)
+      this.subs.slice().forEach(w => w.update())
+    }
+  }
+  Dep.target = null
+
+  // ★ 新增：targetStack —— 处理嵌套的 watcher 求值
+  const targetStack = []
+  function pushTarget(w) {
+    targetStack.push(w)
+    Dep.target = w
+  }
+  function popTarget() {
+    targetStack.pop()
+    Dep.target = targetStack[targetStack.length - 1] || null
+  }
+
+  // ============================================================
+  //  Watcher
+  // ============================================================
+  let watcherUid = 0
+  class Watcher {
+    constructor(fn, name) {
+      this.id = ++watcherUid
+      this.name = name
+      this.fn = fn
+      this.deps = []
+      this.get()
+    }
+    addDep(dep) {
+      if (this.deps.includes(dep)) return
+      this.deps.push(dep)
+      dep.addSub(this)
+    }
+    get() {
+      log('info', `watcher#${this.id}[${this.name}] 求值`)
+      pushTarget(this)
+      try { this.fn() } finally { popTarget() }
+    }
+    update() {
+      log('update', `watcher#${this.id}[${this.name}] update`)
+      this.get()
+    }
+  }
+
+  // ============================================================
+  //  defineReactive / observe（递归版）
+  // ============================================================
+  function defineReactive(obj, key) {
+    let val = obj[key]
+    const dep = new Dep(key)
+    let childOb = observe(val)        // ★ 递归劫持子对象
+
+    Object.defineProperty(obj, key, {
+      enumerable: true,
+      configurable: true,
+      get() {
+        dep.depend()
+        // 子对象本身也要被收集——这样替换整个 address 时 watcher 才会被通知
+        if (childOb) childOb.dep.depend()
+        return val
+      },
+      set(newVal) {
+        if (newVal === val) return
+        log('info', `setter: ${key} 改变`)
+        val = newVal
+        childOb = observe(newVal)     // 新值如果是对象，继续劫持
+        dep.notify()
+      }
+    })
+  }
+
+  // observe 现在返回一个简单的"对象级 dep"，挂在 __ob__ 上
+  // 这样替换/新增子对象时也能触发更新（对照 Vue 中的 Observer.dep）
+  function observe(value) {
+    if (!value || typeof value !== 'object') return null
+    if (value.__ob__) return value.__ob__   // 已劫持过，复用
+
+    const ob = { dep: new Dep(`<obj#${depUid + 1}>`) }
+    Object.defineProperty(value, '__ob__', {
+      value: ob, enumerable: false, configurable: true, writable: true
+    })
+
+    Object.keys(value).forEach(key => defineReactive(value, key))
+    return ob
+  }
+
+  // ============================================================
+  //  使用：嵌套数据
+  // ============================================================
+  const data = {
+    user:    { name: 'Alice', age: 18 },
+    address: { city: '杭州', zip: '310000' }
+  }
+
+  observe(data)
+  log('info', '─── data 已变成深度响应式 ───')
+
+  new Watcher(() => {
+    document.getElementById('name').textContent = data.user.name
+  }, 'name')
+
+  new Watcher(() => {
+    document.getElementById('age').textContent = data.user.age
+  }, 'age')
+
+  new Watcher(() => {
+    document.getElementById('addr').textContent = data.address.city
+  }, 'addr')
+
+  new Watcher(() => {
+    document.getElementById('zip').textContent = data.address.zip
+  }, 'zip')
+
+  // 同时依赖 user.name / user.age / address.city —— 跨越两层嵌套
+  new Watcher(() => {
+    const u = data.user, a = data.address
+    document.getElementById('intro-line').textContent =
+      `${u.name}, ${u.age} 岁，居住在 ${a.city}（${a.zip}）`
+  }, 'intro')
+
+  log('info', '─── 全部 watcher 初始化完成 ───')
+
+  window.data = data
+</script>
+
+</body>
+</html>

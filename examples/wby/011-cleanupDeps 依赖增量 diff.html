@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>011 · cleanupDeps 依赖增量 diff</title>
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    .stat {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      background: #f0f0f0;
+      margin-right: 8px;
+      font-family: Menlo, Consolas, monospace;
+    }
+    .stat b { color: #1677ff; font-size: 16px; }
+    .deps-view {
+      font-family: Menlo, Consolas, monospace;
+      font-size: 13px;
+      background: #f5f5f5;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+    .mode-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    .mode-tag.bad  { background: #fff1f0; color: #ff4d4f; }
+    .mode-tag.good { background: #f6ffed; color: #52c41a; }
+  </style>
+</head>
+<body>
+
+<h1>⑪ cleanupDeps 依赖增量 diff</h1>
+<p class="intro">
+  到 010 为止，watcher 每次重新求值都会"叠加"新依赖，<b>但旧的依赖从来没被清理过</b>。<br>
+  这在 <b>v-if 场景</b>下会出问题：<br>
+  &nbsp;&nbsp;模板里 <code>v-if="show"</code> 时读 <code>data.a</code>，<code>v-else</code> 时读 <code>data.b</code>。<br>
+  &nbsp;&nbsp;切换到 b 分支后，watcher 已经不依赖 a 了；但 a 的 dep 里仍记着它，<br>
+  &nbsp;&nbsp;改 a 还会触发一次无意义的 update。<br>
+  <br>
+  Vue 的解法：<b>双缓冲依赖列表</b><br>
+  &nbsp;&nbsp;• 求值前：<code>newDeps = []</code><br>
+  &nbsp;&nbsp;• 求值时：依赖 <b>先记入 newDeps</b><br>
+  &nbsp;&nbsp;• 求值后：对比新旧，把"在 deps 但不在 newDeps"的从 dep.subs 中移除；最后 <code>deps = newDeps</code><br>
+  这样依赖永远只保留"上一次求值时实际用到"的那些。
+</p>
+
+<div class="panel">
+  <h2>① 视图区</h2>
+  <div>
+    <span class="stat">show = <b id="vshow">true</b></span>
+    <span class="stat">a = <b id="va">10</b></span>
+    <span class="stat">b = <b id="vb">100</b></span>
+    <span class="stat">渲染输出 = <b id="vout">-</b></span>
+  </div>
+  <div class="deps-view" id="depsView"></div>
+  <div style="margin-top:8px">
+    <span class="stat">render 累计次数：<b id="renderCount">0</b></span>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>② 操作区
+    <span class="mode-tag good" id="modeBadge">cleanup ON</span>
+  </h2>
+  <p class="intro" style="margin-top:0">
+    步骤建议：<br>
+    1️⃣ 先 reset，看到 watcher 当前依赖 <code>show</code> 和 <code>a</code>；<br>
+    2️⃣ 切换 <code>show=false</code>，watcher 改读 b；<br>
+    3️⃣ 改 <code>a</code>——cleanup ON 时不再触发，cleanup OFF 时仍触发。
+  </p>
+  <div class="actions">
+    <button onclick="data.show = !data.show">切换 show（=切换分支）</button>
+    <button onclick="data.a = data.a + 1">a++（无关分支时不应触发）</button>
+    <button onclick="data.b = data.b + 1">b++（无关分支时不应触发）</button>
+    <button onclick="toggleCleanup()">切换 cleanup ON/OFF</button>
+    <button onclick="renderCount = 0; document.getElementById('renderCount').textContent = 0">重置计数</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>③ 日志
+    <button class="clear-btn" onclick="clearLog()">清空</button>
+  </h2>
+  <div id="log"></div>
+</div>
+
+<div class="note good">
+  <b>双缓冲算法（核心 4 步）：</b><br>
+  &nbsp;&nbsp;1. <b>newDeps 先收集</b>：<code>addDep</code> 时，如果 newDepIds 已包含就跳过；如果<b>旧 deps</b>没有这个 dep，才让 dep.addSub(this)。<br>
+  &nbsp;&nbsp;2. <b>遍历旧 deps</b>：在 newDepIds 里没找到的，调 <code>dep.removeSub(this)</code>——这就是清理。<br>
+  &nbsp;&nbsp;3. <b>交换</b> newDepIds ↔ depIds、newDeps ↔ deps，下次求值复用对象。<br>
+  &nbsp;&nbsp;4. <b>清空</b> newDeps 等待下一轮。<br>
+  <br>
+  这样既<b>避免重复 addSub</b>，又能<b>精确移除已不再依赖的 dep</b>，是性能和精确性兼得的设计。
+</div>
+<div class="note bad">
+  <b>遗留：</b>到现在我们的 Watcher 都是"自动跑"的（构造时立即 get、有变化立即 run）。<br>
+  computed 应该是"只有在被读取时才求值，且会缓存上次的结果"——这就是<b>lazy watcher</b>。<br>
+  下一篇我们用最小改动支持它。
+</div>
+<div class="note next">
+  <b>下一篇 012 ➜</b> lazy watcher：dirty 标记 + 延迟求值，computed 的内核机制。
+</div>
+
+<div class="nav">
+  <a href="./010-异步更新调度 scheduler.html">← 上一篇 010 · 异步调度</a>
+  <a href="./012-lazy watcher（computed 的内核）.html">下一篇 012 · lazy watcher →</a>
+</div>
+
+<script src="./utils.js"></script>
+<script>
+  // ============================================================
+  //  Dep（addSub / removeSub 都要支持）
+  // ============================================================
+  let depUid = 0
+  class Dep {
+    constructor(name) { this.id = ++depUid; this.name = name; this.subs = [] }
+    depend() { if (Dep.target) Dep.target.addDep(this) }
+    addSub(w) {
+      if (!this.subs.includes(w)) {
+        this.subs.push(w)
+        log('track', `dep[${this.name}] +1 watcher#${w.id}`)
+      }
+    }
+    removeSub(w) {
+      const i = this.subs.indexOf(w)
+      if (i > -1) {
+        this.subs.splice(i, 1)
+        log('info', `dep[${this.name}] -1 watcher#${w.id}（cleanup 清理）`)
+      }
+    }
+    notify() {
+      log('trigger', `dep[${this.name}] 通知 ${this.subs.length} 个 watcher`)
+      this.subs.slice().forEach(w => w.update())
+    }
+  }
+  Dep.target = null
+  const targetStack = []
+  function pushTarget(w) { targetStack.push(w); Dep.target = w }
+  function popTarget() { targetStack.pop(); Dep.target = targetStack[targetStack.length - 1] || null }
+
+  function observe(v) {
+    if (!v || typeof v !== 'object') return
+    Object.keys(v).forEach(k => defineReactive(v, k))
+  }
+  function defineReactive(obj, key) {
+    let val = obj[key]
+    const dep = new Dep(key)
+    Object.defineProperty(obj, key, {
+      enumerable: true, configurable: true,
+      get() { dep.depend(); return val },
+      set(newVal) { if (newVal === val) return; val = newVal; dep.notify() }
+    })
+  }
+
+  // ============================================================
+  //  ★ Watcher：双缓冲 deps + cleanupDeps
+  // ============================================================
+  let cleanupOn = true
+  let watcherUid = 0
+  class Watcher {
+    constructor(fn, name) {
+      this.id = ++watcherUid; this.name = name; this.fn = fn
+      this.deps = []; this.depIds = new Set()
+      this.newDeps = []; this.newDepIds = new Set()
+      this.get()
+    }
+    addDep(dep) {
+      if (this.newDepIds.has(dep.id)) return
+      this.newDepIds.add(dep.id)
+      this.newDeps.push(dep)
+      // ★ 关键 1：只有"以前没订阅过"的 dep 才 addSub，避免重复
+      if (!this.depIds.has(dep.id)) {
+        dep.addSub(this)
+      }
+    }
+    cleanupDeps() {
+      // ★ 关键 2：旧 deps 中不在 newDepIds 的，从 dep.subs 中移除
+      let i = this.deps.length
+      while (i--) {
+        const dep = this.deps[i]
+        if (!this.newDepIds.has(dep.id)) {
+          dep.removeSub(this)
+        }
+      }
+      // ★ 关键 3：交换 newDeps / deps，复用对象
+      let tmp = this.depIds
+      this.depIds = this.newDepIds
+      this.newDepIds = tmp
+      this.newDepIds.clear()
+
+      tmp = this.deps
+      this.deps = this.newDeps
+      this.newDeps = tmp
+      this.newDeps.length = 0
+    }
+    get() {
+      pushTarget(this)
+      try {
+        this.fn()
+      } finally {
+        popTarget()
+        if (cleanupOn) {
+          this.cleanupDeps()
+        } else {
+          // 不清理时，只把 newDeps 合并进 deps（不去除任何旧的）
+          this.newDeps.forEach(d => {
+            if (!this.depIds.has(d.id)) { this.depIds.add(d.id); this.deps.push(d) }
+          })
+          this.newDeps.length = 0; this.newDepIds.clear()
+        }
+      }
+    }
+    update() {
+      log('update', `watcher#${this.id}[${this.name}] update`)
+      this.get()
+      updateDepsView()
+    }
+  }
+
+  // ============================================================
+  //  使用：v-if 风格的分支 watcher
+  // ============================================================
+  const data = { show: true, a: 10, b: 100 }
+  observe(data)
+
+  let renderCount = 0
+  let renderWatcher = new Watcher(() => {
+    renderCount++
+    const out = data.show ? data.a : data.b
+    document.getElementById('vshow').textContent = data.show
+    document.getElementById('va').textContent = data.a
+    document.getElementById('vb').textContent = data.b
+    document.getElementById('vout').textContent = out + (data.show ? ' (来自 a 分支)' : ' (来自 b 分支)')
+    document.getElementById('renderCount').textContent = renderCount
+  }, 'render')
+  updateDepsView()
+
+  function updateDepsView() {
+    const list = renderWatcher.deps.map(d => d.name).join(', ')
+    document.getElementById('depsView').innerHTML =
+      `当前 watcher 依赖：[<b style="color:#1677ff">${list}</b>]`
+  }
+
+  // ============================================================
+  //  开关
+  // ============================================================
+  function toggleCleanup() {
+    cleanupOn = !cleanupOn
+    const badge = document.getElementById('modeBadge')
+    badge.textContent = cleanupOn ? 'cleanup ON' : 'cleanup OFF'
+    badge.className = 'mode-tag ' + (cleanupOn ? 'good' : 'bad')
+    log('info', `── 切换到 cleanup ${cleanupOn ? 'ON' : 'OFF'} ──`)
+  }
+
+  window.data = data
+  window.toggleCleanup = toggleCleanup
+</script>
+
+</body>
+</html>

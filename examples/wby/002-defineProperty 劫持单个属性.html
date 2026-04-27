@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>002 · Object.defineProperty 劫持单个属性</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<h1>② Object.defineProperty 劫持单个属性</h1>
+<p class="intro">
+  上一篇我们看到：直接给变量赋值，UI 不会自动更新。<br>
+  这一篇我们介绍 <b>Object.defineProperty</b>——它能拦截一个属性的"读"和"写"。<br>
+  我们让 <b>setter 在被赋值时自动调用 render()</b>，于是写数据这件事终于"有了反应"。
+</p>
+
+<div class="panel">
+  <h2>① 视图区</h2>
+  <div class="display">
+    <div><strong>姓名：</strong><span id="name"></span></div>
+    <div><strong>年龄：</strong><span id="age"></span></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>② 操作区</h2>
+  <p class="intro" style="margin-top:0">
+    本例只对 <b>name</b> 做了劫持，<b>age 没做</b>。可以分别点击下面的按钮，对比效果：
+  </p>
+  <div class="actions">
+    <button onclick="data.name = 'Alice'">name = 'Alice'（自动更新 ✅）</button>
+    <button onclick="data.name = 'Bob'">name = 'Bob'（自动更新 ✅）</button>
+    <button class="warn" onclick="data.age++; log('bad','age 没被劫持，UI 不动')">age++（UI 不动 ❌）</button>
+    <button onclick="render()">手动 render（age 才同步）</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>③ 日志
+    <button class="clear-btn" onclick="clearLog()">清空</button>
+  </h2>
+  <div id="log"></div>
+</div>
+
+<div class="note good">
+  <b>关键 API：</b><code>Object.defineProperty(obj, key, { get(){...}, set(newVal){...} })</code><br>
+  读取 <code>obj.key</code> 会触发 <b>get</b>，写入 <code>obj.key = x</code> 会触发 <b>set</b>。<br>
+  我们在 set 里调用 render()，赋值就和"触发副作用"绑在了一起。
+</div>
+<div class="note bad">
+  <b>痛点：</b>这段代码只能针对一个属性。如果对象有 10 个属性，每个属性都要写一段几乎一模一样的 defineProperty。
+</div>
+<div class="note next">
+  <b>下一篇 003 ➜</b> 把这段重复代码抽象成 <code>defineReactive(obj, key)</code> 函数，遍历对象所有 key 一次性劫持。
+</div>
+
+<div class="nav">
+  <a href="./001-原始问题：数据不会自己动.html">← 上一篇 001 · 原始问题</a>
+  <a href="./003-defineReactive 抽象成函数.html">下一篇 003 · defineReactive 抽象成函数 →</a>
+</div>
+
+<script src="./utils.js"></script>
+<script>
+  // ============================================================
+  //  本例：仅对 data.name 做属性劫持
+  // ============================================================
+  const data = {
+    name: 'Alice',
+    age: 18
+  }
+
+  // 渲染函数（与 001 完全一样）
+  function render() {
+    document.getElementById('name').textContent = data.name
+    document.getElementById('age').textContent = data.age
+    log('update', 'render() 执行：DOM 与 data 同步')
+  }
+
+  // ─── 关键魔法：用闭包变量 _name 存真值，把对外的 .name 替换成 getter/setter ───
+  let _name = data.name
+  Object.defineProperty(data, 'name', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      log('track', `读取 data.name -> "${_name}"`)
+      return _name
+    },
+    set(newVal) {
+      if (newVal === _name) return
+      log('trigger', `写入 data.name: "${_name}" -> "${newVal}"，自动触发 render`)
+      _name = newVal
+      render()        // ← 关键：setter 中自动调用副作用
+    }
+  })
+
+  // 注意：data.age 没有被劫持，依然是普通属性，所以改 age 不会触发 render
+
+  render()
+  log('info', '─── 初始化完成（只有 data.name 是响应式） ───')
+
+  window.data = data
+  window.render = render
+</script>
+
+</body>
+</html>

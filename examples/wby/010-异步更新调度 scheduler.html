@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>010 · 异步更新调度（scheduler）</title>
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    .stat {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      background: #f0f0f0;
+      margin-right: 8px;
+      font-family: Menlo, Consolas, monospace;
+    }
+    .stat b { color: #1677ff; font-size: 18px; }
+    .mode {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    .mode.sync { background: #fff1f0; color: #ff4d4f; }
+    .mode.async { background: #f6ffed; color: #52c41a; }
+  </style>
+</head>
+<body>
+
+<h1>⑩ 异步更新调度（scheduler）</h1>
+<p class="intro">
+  到 009 为止，每次 setter 都会立即调用 <code>watcher.update()</code> → 立即 <code>get()</code> → 立即重渲染。<br>
+  问题是：在一个事件里如果连续改 5 次数据，UI 会被白白重渲染 5 次，浪费严重。<br>
+  Vue 的解法是：<b>把 update 异步化</b>——<br>
+  &nbsp;&nbsp;1. setter 调 <code>watcher.update()</code> 时不立即跑，而是把 watcher 推进队列；<br>
+  &nbsp;&nbsp;2. 用 <code>has[id]</code> 去重，相同 watcher 不重复入队；<br>
+  &nbsp;&nbsp;3. 在 <code>nextTick</code>（一个微任务）里统一 flush 队列；<br>
+  &nbsp;&nbsp;4. flush 前对队列排序（保证父组件早于子组件、user-watcher 早于 render-watcher）。
+</p>
+
+<div class="panel">
+  <h2>① 视图区</h2>
+  <div>
+    <span class="stat">name = <b id="vname">-</b></span>
+    <span class="stat">age = <b id="vage">-</b></span>
+  </div>
+  <div style="margin-top:12px">
+    <span class="stat">render 累计执行次数：<b id="renderCount">0</b></span>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>② 操作区
+    <span class="mode" id="modeBadge">async（队列调度）</span>
+  </h2>
+  <p class="intro" style="margin-top:0">
+    点击下方按钮会<b>连续修改 5 次数据</b>。在 <b>async</b> 模式下，render 只会执行 1 次；<br>
+    切到 <b>sync</b> 模式（关闭调度），同样的操作会让 render 执行 5 次——这就是 scheduler 的价值。
+  </p>
+  <div class="actions">
+    <button onclick="batch5()">一次连改 5 次（看渲染次数）</button>
+    <button onclick="toggleMode()">切换 sync / async 模式</button>
+    <button onclick="resetCount()">重置渲染计数</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>③ 日志
+    <button class="clear-btn" onclick="clearLog()">清空</button>
+  </h2>
+  <div id="log"></div>
+</div>
+
+<div class="note good">
+  <b>关键设计：queue + has + nextTick</b><br>
+  &nbsp;&nbsp;• <code>queue</code>：等待 flush 的 watcher 数组；<br>
+  &nbsp;&nbsp;• <code>has[id]</code>：watcher 是否已在队列中（O(1) 去重）；<br>
+  &nbsp;&nbsp;• <code>waiting</code>：是否已经把 flush 任务放进 nextTick；<br>
+  &nbsp;&nbsp;• <code>flushSchedulerQueue</code>：排序后逐个执行，最后重置状态。<br>
+  <br>
+  <b>nextTick 的本质：</b>把回调放到下一个微任务（Promise.then）里。<br>
+  这是 JS 事件循环里"<b>当前同步代码跑完后立刻执行、但 DOM 渲染前</b>"的最早时机。
+</div>
+<div class="note good">
+  <b>排序的三条语义保证：</b>（见 <code>scheduler.ts</code> 注释）<br>
+  &nbsp;&nbsp;1. 父组件的 watcher 先于子组件——因为父先创建，id 更小；<br>
+  &nbsp;&nbsp;2. user-watcher（<code>this.$watch</code>/<code>watch</code>）先于 render-watcher——前者先创建；<br>
+  &nbsp;&nbsp;3. 子组件被销毁时，它的 watcher 可以被跳过。
+</div>
+<div class="note next">
+  <b>下一篇 011 ➜</b> cleanupDeps：v-if 切换分支时，旧依赖必须被精确移除——演示双缓冲（newDeps / deps）方案。
+</div>
+
+<div class="nav">
+  <a href="./009-set 与 delete 兜底新增删除属性.html">← 上一篇 009 · $set / $delete</a>
+  <a href="./011-cleanupDeps 依赖增量 diff.html">下一篇 011 · cleanupDeps →</a>
+</div>
+
+<script src="./utils.js"></script>
+<script>
+  // ============================================================
+  //  Dep / observe / defineReactive（沿用前几篇的最简实现）
+  // ============================================================
+  let depUid = 0
+  class Dep {
+    constructor(name) { this.id = ++depUid; this.name = name; this.subs = [] }
+    depend() { if (Dep.target) Dep.target.addDep(this) }
+    addSub(w) { if (!this.subs.includes(w)) this.subs.push(w) }
+    notify() { this.subs.slice().forEach(w => w.update()) }
+  }
+  Dep.target = null
+  const targetStack = []
+  function pushTarget(w) { targetStack.push(w); Dep.target = w }
+  function popTarget() { targetStack.pop(); Dep.target = targetStack[targetStack.length - 1] || null }
+
+  function observe(v) {
+    if (!v || typeof v !== 'object') return
+    Object.keys(v).forEach(k => defineReactive(v, k))
+  }
+  function defineReactive(obj, key) {
+    let val = obj[key]
+    const dep = new Dep(key)
+    Object.defineProperty(obj, key, {
+      enumerable: true, configurable: true,
+      get() { dep.depend(); return val },
+      set(newVal) { if (newVal === val) return; val = newVal; dep.notify() }
+    })
+  }
+
+  // ============================================================
+  //  ★ 调度器（async 模式 / sync 模式 二者切换以做对比）
+  // ============================================================
+  let asyncMode = true       // 默认 async，演示效果
+  const queue = []
+  const has = {}
+  let waiting = false
+
+  function nextTick(cb) {
+    Promise.resolve().then(cb)
+  }
+
+  function queueWatcher(watcher) {
+    const id = watcher.id
+    if (has[id]) {                                 // ★ 关键去重
+      log('info', `watcher#${id} 已在队列中，跳过`)
+      return
+    }
+    has[id] = true
+    queue.push(watcher)
+    log('info', `watcher#${id}[${watcher.name}] 入队，队列长度 ${queue.length}`)
+    if (!waiting) {
+      waiting = true
+      nextTick(flushSchedulerQueue)
+    }
+  }
+
+  function flushSchedulerQueue() {
+    log('trigger', `── 开始 flush，队列共 ${queue.length} 个 watcher ──`)
+    queue.sort((a, b) => a.id - b.id)              // ★ 父先于子
+    for (let i = 0; i < queue.length; i++) {
+      const w = queue[i]
+      has[w.id] = null
+      w.run()
+    }
+    queue.length = 0
+    waiting = false
+    log('trigger', `── flush 完成 ──`)
+  }
+
+  // ============================================================
+  //  Watcher：update 走 queue，run 才真正求值
+  // ============================================================
+  let watcherUid = 0
+  class Watcher {
+    constructor(fn, name) {
+      this.id = ++watcherUid; this.name = name; this.fn = fn; this.deps = []
+      this.get()
+    }
+    addDep(d) { if (!this.deps.includes(d)) { this.deps.push(d); d.addSub(this) } }
+    get() { pushTarget(this); try { this.fn() } finally { popTarget() } }
+    update() {
+      if (asyncMode) queueWatcher(this)
+      else this.run()
+    }
+    run() {
+      log('update', `watcher#${this.id}[${this.name}] run`)
+      this.get()
+    }
+  }
+
+  // ============================================================
+  //  使用：用一个 render 计数器观察渲染次数
+  // ============================================================
+  const data = { name: 'Alice', age: 18 }
+  observe(data)
+
+  let renderCount = 0
+  new Watcher(() => {
+    renderCount++
+    document.getElementById('vname').textContent = data.name
+    document.getElementById('vage').textContent = data.age
+    document.getElementById('renderCount').textContent = renderCount
+    log('update', `第 ${renderCount} 次 render 执行（DOM 实际更新）`)
+  }, 'render')
+
+  // ============================================================
+  //  操作区按钮逻辑
+  // ============================================================
+  function batch5() {
+    log('info', `─── 即将连续修改 5 次数据（${asyncMode ? 'async' : 'sync'} 模式）───`)
+    data.name = 'Bob'
+    data.age = data.age + 1
+    data.name = 'Carol'
+    data.age = data.age + 1
+    data.name = 'Dave'
+    log('info', `─── 5 次同步赋值已结束，等待 flush ───`)
+  }
+
+  function toggleMode() {
+    asyncMode = !asyncMode
+    document.getElementById('modeBadge').textContent = asyncMode ? 'async（队列调度）' : 'sync（直接重渲染）'
+    document.getElementById('modeBadge').className = 'mode ' + (asyncMode ? 'async' : 'sync')
+    log('info', `── 切换到 ${asyncMode ? 'async' : 'sync'} 模式 ──`)
+  }
+
+  function resetCount() {
+    renderCount = 0
+    document.getElementById('renderCount').textContent = '0'
+  }
+
+  window.data = data
+  window.batch5 = batch5
+  window.toggleMode = toggleMode
+  window.resetCount = resetCount
+</script>
+
+</body>
+</html>

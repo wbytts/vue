@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>006 · Watcher 封装观察者</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<h1>⑥ Watcher 封装观察者</h1>
+<p class="intro">
+  上一篇的 <code>autorun</code> 已经"能用"了，但它的"订阅者"是一个裸函数，缺少身份、状态和管理能力：<br>
+  &nbsp;&nbsp;• 想知道某个订阅者依赖了哪些 dep？拿不到。<br>
+  &nbsp;&nbsp;• 想销毁一个订阅者（比如组件卸载）？没法做。<br>
+  &nbsp;&nbsp;• 多次添加同一个回调，会重复订阅。<br>
+  <br>
+  把"挂指针 → 跑 fn → 摘指针"这套行为打包成 <b>Watcher 类</b>，每个观察者就有了自己的 id、deps、update 方法。<br>
+  这正是 Vue 中 Watcher 的雏形。
+</p>
+
+<div class="panel">
+  <h2>① 视图区</h2>
+  <div class="display">
+    <div><strong>头部姓名：</strong><span id="header-name"></span></div>
+  </div>
+  <div class="display" style="margin-top:8px">
+    <div><strong>资料区姓名：</strong><span id="profile-name"></span></div>
+    <div><strong>年龄：</strong><span id="profile-age"></span></div>
+    <div><strong>简介：</strong><span id="intro"></span></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>② 操作区</h2>
+  <p class="intro" style="margin-top:0">
+    <b>简介</b>同时依赖 name 和 age，会注册到两个 dep。改 name / age 都会触发它。
+  </p>
+  <div class="actions">
+    <button onclick="data.name = 'Alice'">name = 'Alice'</button>
+    <button onclick="data.name = 'Bob'">name = 'Bob'</button>
+    <button onclick="data.age++">age++</button>
+    <button onclick="data.age--">age--</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>③ 日志
+    <button class="clear-btn" onclick="clearLog()">清空</button>
+  </h2>
+  <div id="log"></div>
+</div>
+
+<div class="note good">
+  <b>Watcher 的职责：</b><br>
+  &nbsp;&nbsp;• 构造时立即调用 <code>get()</code>，把自己挂到 <code>Dep.target</code>，跑 fn 触发依赖收集；<br>
+  &nbsp;&nbsp;• <code>addDep(dep)</code>：双向记录——dep 收集 watcher，watcher 也记下 dep（便于以后清理）；<br>
+  &nbsp;&nbsp;• <code>update()</code>：被 dep 通知到时调用，重新执行 fn。<br>
+  现在 dep.subs 里存的不再是裸函数，而是 Watcher 实例，调用接口统一为 <code>w.update()</code>。
+</div>
+<div class="note bad">
+  <b>遗留问题：</b><br>
+  &nbsp;&nbsp;1. 嵌套对象（如 <code>data.user.name</code>）目前只能劫持外层一层；<br>
+  &nbsp;&nbsp;2. <code>Dep.target</code> 只能存一个值；如果一个 watcher 内部又触发另一个 watcher 求值，会丢失；<br>
+  &nbsp;&nbsp;3. 多次重新求值时旧依赖没有清理。<br>
+  下一篇我们一次解决前两个，并把整套搭出"完整模型"。
+</div>
+<div class="note next">
+  <b>下一篇 007 ➜</b> 让 <code>observe</code> 递归处理嵌套对象，用 <b>targetStack</b> 处理嵌套求值，给出与 Vue 源码近乎一致的最小响应式系统。
+</div>
+
+<div class="nav">
+  <a href="./005-Dep.target 自动依赖收集.html">← 上一篇 005 · Dep.target</a>
+  <a href="./007-完整模型 observe 递归与多 watcher 协作.html">下一篇 007 · 完整模型 →</a>
+</div>
+
+<script src="./utils.js"></script>
+<script>
+  // ============================================================
+  //  Dep（与 005 一致）
+  // ============================================================
+  let depUid = 0
+  class Dep {
+    constructor(name) {
+      this.id = ++depUid
+      this.name = name
+      this.subs = []          // 现在存的是 Watcher 实例
+    }
+    depend() {
+      if (Dep.target) {
+        Dep.target.addDep(this)   // ★ 让 watcher 自己来管 add，避免重复
+      }
+    }
+    addSub(watcher) {
+      this.subs.push(watcher)
+      log('track', `dep[${this.name}] +1 watcher#${watcher.id}（共 ${this.subs.length}）`)
+    }
+    notify() {
+      log('trigger', `dep[${this.name}] 通知 ${this.subs.length} 个 watcher`)
+      this.subs.slice().forEach(w => w.update())
+    }
+  }
+  Dep.target = null
+
+  // ============================================================
+  //  Watcher：把 autorun 的逻辑封装成对象
+  // ============================================================
+  let watcherUid = 0
+  class Watcher {
+    constructor(fn, name) {
+      this.id = ++watcherUid
+      this.name = name
+      this.fn = fn
+      this.deps = []            // 这个 watcher 依赖了哪些 dep
+      this.get()                // 立刻执行一次，建立依赖
+    }
+    // 让 dep 与 watcher 双向记录
+    addDep(dep) {
+      if (this.deps.includes(dep)) return
+      this.deps.push(dep)
+      dep.addSub(this)
+    }
+    // 求值：挂指针 → 跑 fn → 摘指针
+    get() {
+      log('info', `watcher#${this.id}[${this.name}] 求值，开始收集依赖`)
+      Dep.target = this
+      try {
+        this.fn()
+      } finally {
+        Dep.target = null
+      }
+    }
+    // 被通知到时重新求值
+    update() {
+      log('update', `watcher#${this.id}[${this.name}] update`)
+      this.get()
+    }
+  }
+
+  // ============================================================
+  //  defineReactive / observe（与 005 一致）
+  // ============================================================
+  function defineReactive(obj, key) {
+    let val = obj[key]
+    const dep = new Dep(key)
+    Object.defineProperty(obj, key, {
+      enumerable: true,
+      configurable: true,
+      get() {
+        dep.depend()
+        return val
+      },
+      set(newVal) {
+        if (newVal === val) return
+        log('info', `setter: ${key} "${val}" -> "${newVal}"`)
+        val = newVal
+        dep.notify()
+      }
+    })
+  }
+  function observe(obj) {
+    Object.keys(obj).forEach(key => defineReactive(obj, key))
+  }
+
+  // ============================================================
+  //  使用
+  // ============================================================
+  const data = { name: 'Alice', age: 18 }
+  observe(data)
+
+  new Watcher(() => {
+    document.getElementById('header-name').textContent = data.name
+  }, 'render-header')
+
+  new Watcher(() => {
+    document.getElementById('profile-name').textContent = data.name
+  }, 'render-profile-name')
+
+  new Watcher(() => {
+    document.getElementById('profile-age').textContent = data.age
+  }, 'render-profile-age')
+
+  // 同时依赖 name 和 age 的 watcher
+  new Watcher(() => {
+    document.getElementById('intro').textContent = `${data.name}, ${data.age} 岁`
+  }, 'render-intro')
+
+  log('info', '─── 初始化完成，每个 Watcher 都登记进了它读到的所有 dep ───')
+
+  window.data = data
+</script>
+
+</body>
+</html>

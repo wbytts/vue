@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>009 · $set / $delete 兜底新增删除属性</title>
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    .kv { font-family: Menlo, Consolas, monospace; font-size: 13px; line-height: 1.7; }
+    .kv .k { color: #888; }
+    .kv .v { color: #1677ff; }
+  </style>
+</head>
+<body>
+
+<h1>⑨ <code>$set</code> / <code>$delete</code> 兜底新增删除属性</h1>
+<p class="intro">
+  我们的响应式机制依赖<b>"在 observe 时给已有的 key 加上 getter/setter"</b>。<br>
+  那么——<br>
+  &nbsp;&nbsp;• 之后<b>新增</b>的 key 上没有 setter，赋值不会通知；<br>
+  &nbsp;&nbsp;• <code>delete</code> 一个 key，更没有谁通知。<br>
+  Vue 的解法是提供 <code>Vue.set</code> 和 <code>Vue.delete</code>（实例上是 <code>$set</code>/<code>$delete</code>）作为<b>显式兜底通道</b>：<br>
+  内部主动 <code>defineReactive</code> 新键，并通过对象级的 <code>__ob__.dep</code> 通知更新。
+</p>
+
+<div class="panel">
+  <h2>① 视图区</h2>
+  <div class="kv" id="view"></div>
+</div>
+
+<div class="panel">
+  <h2>② 操作区</h2>
+  <p class="intro" style="margin-top:0">
+    对比"直接赋值"和"<code>$set</code>"两种方式。
+  </p>
+  <div class="actions">
+    <button class="warn" onclick="data.user.gender = '男'; log('bad','直接赋值新键 gender：UI 不会更新')">user.gender = '男'（❌）</button>
+    <button onclick="$set(data.user, 'gender', '女')">$set(user, 'gender', '女')（✅）</button>
+    <button onclick="$set(data.user, 'phone', '138-' + Math.floor(Math.random()*9000+1000))">$set 新增 phone（✅）</button>
+    <button class="warn" onclick="delete data.user.gender; log('bad','delete 不会通知，UI 不会更新')">delete user.gender（❌）</button>
+    <button onclick="$delete(data.user, 'gender')">$delete(user, 'gender')（✅）</button>
+  </div>
+  <hr style="margin:16px 0; border: 1px dashed #ddd">
+  <p class="intro" style="margin-top:0">
+    数组的索引修改也是同样道理（即便 008 重写了变异方法，<code>arr[i] = x</code> 仍然监听不到）：
+  </p>
+  <div class="actions">
+    <button class="warn" onclick="data.tags[0] = '直接改' + Math.floor(Math.random()*100); log('bad','arr[0] = x：UI 不会更新')">tags[0] = ...（❌）</button>
+    <button onclick="$set(data.tags, 0, '通过-set-' + Math.floor(Math.random()*100))">$set(tags, 0, ...)（✅）</button>
+    <button onclick="$set(data.tags, data.tags.length, '尾部新增')">$set 在末尾新增（✅）</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>③ 日志
+    <button class="clear-btn" onclick="clearLog()">清空</button>
+  </h2>
+  <div id="log"></div>
+</div>
+
+<div class="note good">
+  <b>关键 1：<code>$set</code> 的核心三步</b><br>
+  &nbsp;&nbsp;1. 已经在对象上：直接赋值（getter/setter 已生效）；<br>
+  &nbsp;&nbsp;2. 是数组 + 合法索引：<code>target.splice(key, 1, val)</code>——借 008 重写过的 splice 自动通知；<br>
+  &nbsp;&nbsp;3. 是新键：<code>defineReactive(ob.value, key, val)</code>，再调 <code>ob.dep.notify()</code>。<br>
+  <br>
+  <b>关键 2：<code>__ob__</code> 的双重身份</b><br>
+  &nbsp;&nbsp;• 作为 <b>"已经被 observe 过"的标记</b>——<code>$set</code> 的入参如果没有 <code>__ob__</code>，意味着它本来就不是响应式的，直接赋值就行；<br>
+  &nbsp;&nbsp;• 作为 <b>对象级的 dep 持有者</b>——新增 key 时没有"属性级 dep"可以通知，必须借 <code>ob.dep</code> 这个"对象整体的 dep"。<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;那为什么 watcher 会订阅 <code>ob.dep</code> 呢？回看 008 的 getter：<code>if (childOb) childOb.dep.depend()</code> 这一行就是在做这件事。
+</div>
+<div class="note bad">
+  <b>遗留问题：</b>到现在为止，每改一次数据都会立刻触发一次完整的 render。<br>
+  如果在一个事件里改 5 次 data，UI 就会被重渲染 5 次——明显不合理。<br>
+  下一篇我们引入<b>异步调度</b>来解决这个问题。
+</div>
+<div class="note next">
+  <b>下一篇 010 ➜</b> 异步更新调度（scheduler）：把多次 setter 触发合并成一次 nextTick 后的 flush。
+</div>
+
+<div class="nav">
+  <a href="./008-数组的响应式.html">← 上一篇 008 · 数组响应式</a>
+  <a href="./010-异步更新调度 scheduler.html">下一篇 010 · 异步调度 →</a>
+</div>
+
+<script src="./utils.js"></script>
+<script>
+  // ============================================================
+  //  Dep / Watcher / observe / defineReactive / arrayMethods
+  //  （直接搬 008 的实现，加上 ob.dep.notify 在 $set 里用）
+  // ============================================================
+  let depUid = 0
+  class Dep {
+    constructor(name) { this.id = ++depUid; this.name = name; this.subs = [] }
+    depend() { if (Dep.target) Dep.target.addDep(this) }
+    addSub(w) { if (!this.subs.includes(w)) this.subs.push(w) }
+    notify() {
+      log('trigger', `dep[${this.name}] 通知 ${this.subs.length} 个 watcher`)
+      this.subs.slice().forEach(w => w.update())
+    }
+  }
+  Dep.target = null
+  const targetStack = []
+  function pushTarget(w) { targetStack.push(w); Dep.target = w }
+  function popTarget() { targetStack.pop(); Dep.target = targetStack[targetStack.length - 1] || null }
+
+  let watcherUid = 0
+  class Watcher {
+    constructor(fn, name) { this.id = ++watcherUid; this.name = name; this.fn = fn; this.deps = []; this.get() }
+    addDep(d) { if (!this.deps.includes(d)) { this.deps.push(d); d.addSub(this) } }
+    get() { pushTarget(this); try { this.fn() } finally { popTarget() } }
+    update() { log('update', `watcher#${this.id}[${this.name}] update`); this.get() }
+  }
+
+  // —— 数组方法补丁（与 008 一致）——
+  const arrayProto = Array.prototype
+  const arrayMethods = Object.create(arrayProto)
+  ;['push','pop','shift','unshift','splice','sort','reverse'].forEach(method => {
+    const original = arrayProto[method]
+    Object.defineProperty(arrayMethods, method, {
+      enumerable: false, configurable: true, writable: true,
+      value: function (...args) {
+        const result = original.apply(this, args)
+        const ob = this.__ob__
+        let inserted
+        if (method === 'push' || method === 'unshift') inserted = args
+        else if (method === 'splice') inserted = args.slice(2)
+        if (inserted && inserted.length) ob.observeArray(inserted)
+        ob.dep.notify()
+        return result
+      }
+    })
+  })
+
+  class Observer {
+    constructor(value) {
+      this.value = value
+      this.dep = new Dep(Array.isArray(value) ? '<array>' : '<object>')
+      Object.defineProperty(value, '__ob__', { value: this, enumerable: false, configurable: true, writable: true })
+      if (Array.isArray(value)) { value.__proto__ = arrayMethods; this.observeArray(value) }
+      else Object.keys(value).forEach(key => defineReactive(value, key))
+    }
+    observeArray(items) { items.forEach(item => observe(item)) }
+  }
+  function observe(v) {
+    if (!v || typeof v !== 'object') return null
+    if (v.__ob__) return v.__ob__
+    return new Observer(v)
+  }
+  function defineReactive(obj, key, val) {
+    if (arguments.length === 2) val = obj[key]
+    const dep = new Dep(key)
+    let childOb = observe(val)
+    Object.defineProperty(obj, key, {
+      enumerable: true, configurable: true,
+      get() {
+        dep.depend()
+        if (childOb) childOb.dep.depend()
+        return val
+      },
+      set(newVal) {
+        if (newVal === val) return
+        val = newVal
+        childOb = observe(newVal)
+        dep.notify()
+      }
+    })
+  }
+
+  // ============================================================
+  //  ★ 核心：$set / $delete
+  // ============================================================
+  function $set(target, key, val) {
+    // 数组 + 合法索引：借 splice 自动触发通知
+    if (Array.isArray(target) && Number.isInteger(key) && key >= 0) {
+      target.length = Math.max(target.length, key + 1)
+      target.splice(key, 1, val)
+      log('info', `$set 数组：通过 splice 触发更新`)
+      return val
+    }
+    // 已经存在的 key：等同于直接赋值（已经走 setter）
+    if (key in target && !(key in Object.prototype)) {
+      target[key] = val
+      log('info', `$set 已存在 key：走原 setter`)
+      return val
+    }
+    const ob = target.__ob__
+    // 不是响应式对象：原地赋值即可
+    if (!ob) {
+      target[key] = val
+      log('info', `$set 非响应式目标：原地赋值`)
+      return val
+    }
+    // 是响应式对象 + 新键：手动 defineReactive，并通过对象级 dep 通知
+    defineReactive(ob.value, key, val)
+    log('info', `$set 新键 ${key}：defineReactive + ob.dep.notify`)
+    ob.dep.notify()
+    return val
+  }
+
+  function $delete(target, key) {
+    if (Array.isArray(target) && Number.isInteger(key) && key >= 0) {
+      target.splice(key, 1)
+      log('info', `$delete 数组：通过 splice 删除`)
+      return
+    }
+    const ob = target.__ob__
+    if (!Object.prototype.hasOwnProperty.call(target, key)) return
+    delete target[key]
+    if (ob) {
+      log('info', `$delete 对象 key=${key}：通过 ob.dep.notify 通知`)
+      ob.dep.notify()
+    }
+  }
+
+  // ============================================================
+  //  使用
+  // ============================================================
+  const data = {
+    user: { name: 'Alice', age: 18 },
+    tags: ['frontend', 'vue']
+  }
+  observe(data)
+
+  new Watcher(() => {
+    const lines = []
+    lines.push(`<b>user:</b>`)
+    Object.keys(data.user).forEach(k => lines.push(`&nbsp;&nbsp;<span class="k">${k}:</span> <span class="v">${data.user[k]}</span>`))
+    lines.push(`<b>tags:</b>`)
+    data.tags.forEach((t, i) => lines.push(`&nbsp;&nbsp;<span class="k">[${i}]</span> <span class="v">${t}</span>`))
+    document.getElementById('view').innerHTML = lines.join('<br>')
+    log('update', 'render 执行')
+  }, 'render')
+
+  window.data = data
+  window.$set = $set
+  window.$delete = $delete
+</script>
+
+</body>
+</html>

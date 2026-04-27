@@ -1,0 +1,103 @@
+/* examples/wby 系列演示页面共用样式 */
+* { box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 16px;
+  color: #333;
+  background: #fafafa;
+}
+
+h1 { font-size: 22px; }
+h2 { font-size: 16px; color: #555; margin-top: 24px; }
+
+.intro {
+  color: #666;
+  line-height: 1.7;
+}
+.intro b { color: #1677ff; }
+
+.note {
+  background: #fffbe6;
+  border-left: 4px solid #faad14;
+  padding: 10px 14px;
+  margin: 12px 0;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.note.bad   { background: #fff1f0; border-left-color: #ff4d4f; }
+.note.good  { background: #f6ffed; border-left-color: #52c41a; }
+.note.next  { background: #e6f4ff; border-left-color: #1677ff; }
+
+.panel {
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.display {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 16px;
+}
+.display strong {
+  display: inline-block;
+  min-width: 60px;
+  color: #888;
+  font-weight: normal;
+}
+.display span {
+  color: #1677ff;
+  font-weight: 600;
+}
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  padding: 6px 12px;
+  border: 1px solid #1677ff;
+  background: #fff;
+  color: #1677ff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+button:hover { background: #1677ff; color: #fff; }
+button.warn  { border-color: #faad14; color: #faad14; }
+button.warn:hover  { background: #faad14; color: #fff; }
+
+#log {
+  background: #1e1e1e;
+  color: #b5cea8;
+  font-family: Consolas, Menlo, monospace;
+  font-size: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  height: 240px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.log-track   { color: #4ec9b0; }
+.log-trigger { color: #ce9178; }
+.log-update  { color: #dcdcaa; }
+.log-info    { color: #9cdcfe; }
+.log-bad     { color: #f48771; }
+
+.clear-btn { float: right; margin-top: -4px; }
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  margin: 24px 0 8px;
+  font-size: 13px;
+}
+.nav a { color: #1677ff; text-decoration: none; }
+.nav a:hover { text-decoration: underline; }

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>003 · defineReactive 抽象成函数</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<h1>③ defineReactive 抽象成函数</h1>
+<p class="intro">
+  上一篇我们对 <code>name</code> 单个属性做了劫持。但项目中对象往往有十几个属性，<br>
+  把这段 defineProperty 重复写十几遍是不可接受的。<br>
+  这一篇我们做两件事：<br>
+  &nbsp;&nbsp;1. 把"劫持一个属性"抽成函数 <b>defineReactive(obj, key)</b>；<br>
+  &nbsp;&nbsp;2. 遍历对象的所有 key，一次性把它们全变成响应式。
+</p>
+
+<div class="panel">
+  <h2>① 视图区</h2>
+  <div class="display">
+    <div><strong>姓名：</strong><span id="name"></span></div>
+    <div><strong>年龄：</strong><span id="age"></span></div>
+    <div><strong>城市：</strong><span id="city"></span></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>② 操作区（所有属性都已响应式 ✅）</h2>
+  <div class="actions">
+    <button onclick="data.name = 'Alice'">name = 'Alice'</button>
+    <button onclick="data.name = 'Bob'">name = 'Bob'</button>
+    <button onclick="data.age++">age++</button>
+    <button onclick="data.city = '上海'">city = '上海'</button>
+    <button onclick="data.city = '北京'">city = '北京'</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>③ 日志
+    <button class="clear-btn" onclick="clearLog()">清空</button>
+  </h2>
+  <div id="log"></div>
+</div>
+
+<div class="note good">
+  <b>关键抽象：</b><br>
+  <code>defineReactive(obj, key)</code> = 把"对单个 key 加 get/set"打包成函数。<br>
+  <code>observe(obj)</code>          = 遍历对象所有 key，逐一 defineReactive。<br>
+  现在新增任何属性，只要被 observe 走过一遍，赋值就自动触发 render。
+</div>
+<div class="note bad">
+  <b>痛点：</b>render 函数被<b>写死在 setter 里</b>。<br>
+  如果将来有多个组件都依赖 <code>data.name</code>，每个组件都想在 name 变化时执行自己的副作用，怎么办？<br>
+  ——总不能修改 defineReactive 源码、把所有人的回调都塞进去。我们需要一种"<b>多个观察者订阅同一个属性</b>"的机制。
+</div>
+<div class="note next">
+  <b>下一篇 004 ➜</b> 引入 <b>Dep 类</b>（发布订阅），让一个属性可以挂多个回调，setter 时一次性通知。
+</div>
+
+<div class="nav">
+  <a href="./002-defineProperty 劫持单个属性.html">← 上一篇 002 · 单属性劫持</a>
+  <a href="./004-Dep 类与发布订阅（手动订阅）.html">下一篇 004 · Dep 类（发布订阅） →</a>
+</div>
+
+<script src="./utils.js"></script>
+<script>
+  // ============================================================
+  //  defineReactive：把单个属性变成响应式
+  //  ----------------------------------------
+  //  每次调用都用闭包保存 val，避免无限递归
+  // ============================================================
+  function defineReactive(obj, key) {
+    let val = obj[key]
+    Object.defineProperty(obj, key, {
+      enumerable: true,
+      configurable: true,
+      get() {
+        return val
+      },
+      set(newVal) {
+        if (newVal === val) return
+        log('trigger', `setter: ${key} "${val}" -> "${newVal}"，触发 render`)
+        val = newVal
+        render()        // ← 仍然写死了 render
+      }
+    })
+  }
+
+  // 遍历对象的所有 key，逐一 defineReactive
+  function observe(obj) {
+    Object.keys(obj).forEach(key => {
+      defineReactive(obj, key)
+    })
+  }
+
+  // ============================================================
+  //  使用
+  // ============================================================
+  const data = {
+    name: 'Alice',
+    age: 18,
+    city: '杭州'
+  }
+
+  function render() {
+    document.getElementById('name').textContent = data.name
+    document.getElementById('age').textContent = data.age
+    document.getElementById('city').textContent = data.city
+    log('update', 'render() 执行：DOM 已同步')
+  }
+
+  observe(data)
+  log('info', '─── observe(data) 完成，所有 key 都是响应式 ───')
+
+  render()
+
+  window.data = data
+</script>
+
+</body>
+</html>

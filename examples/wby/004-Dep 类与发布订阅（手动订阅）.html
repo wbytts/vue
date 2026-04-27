@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>004 · Dep 类与发布订阅（手动订阅）</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<h1>④ Dep 类与发布订阅（手动订阅）</h1>
+<p class="intro">
+  上一篇我们把 render 写死在 setter 里。问题是：<b>同一个属性可能被多个 UI 用到</b>，<br>
+  每个 UI 都想在该属性变化时执行自己的副作用——单一回调显然不够。<br>
+  这一篇引入 <b>Dep（依赖容器）类</b>：每个属性配一个 Dep，里面存订阅者列表。<br>
+  setter 不再直接调 render，而是调 <code>dep.notify()</code>，逐个通知订阅者。
+</p>
+
+<div class="panel">
+  <h2>① 视图区</h2>
+  <div class="display">
+    <div><strong>头部姓名：</strong><span id="header-name"></span></div>
+  </div>
+  <div class="display" style="margin-top:8px">
+    <div><strong>资料区姓名：</strong><span id="profile-name"></span></div>
+    <div><strong>年龄：</strong><span id="profile-age"></span></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>② 操作区</h2>
+  <p class="intro" style="margin-top:0">
+    注意：<b>name 同时被两处 UI 订阅</b>，改 name 时两处都会更新；改 age 时只更新资料区。
+  </p>
+  <div class="actions">
+    <button onclick="data.name = 'Alice'">name = 'Alice'（两处都更新）</button>
+    <button onclick="data.name = 'Bob'">name = 'Bob'（两处都更新）</button>
+    <button onclick="data.age++">age++（只更新资料区）</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>③ 日志
+    <button class="clear-btn" onclick="clearLog()">清空</button>
+  </h2>
+  <div id="log"></div>
+</div>
+
+<div class="note good">
+  <b>关键设计：发布订阅</b><br>
+  &nbsp;&nbsp;• <b>Dep</b>：每个属性一个，维护 <code>subs</code>（订阅者数组）<br>
+  &nbsp;&nbsp;• <b>addSub(cb)</b>：注册一个回调<br>
+  &nbsp;&nbsp;• <b>notify()</b>：依次调用所有订阅者<br>
+  setter 里 <code>dep.notify()</code> 之后，所有订阅这个属性的回调都会被执行——一对多就实现了。
+</div>
+<div class="note bad">
+  <b>痛点：手写订阅太繁琐</b><br>
+  我们必须明确写出 <code>nameDep.addSub(renderHeader)</code>、<code>nameDep.addSub(renderProfile)</code>……<br>
+  在真实模板里，<code>{{ name }}</code> 出现在哪里我们都得主动登记一次。如果模板里漏了一处，UI 就不会更新；如果多登记一次，又会无故重复执行。<br>
+  <b>能不能让"读取过 name"这件事自己被记录下来？</b>——这就是下一篇的精髓。
+</div>
+<div class="note next">
+  <b>下一篇 005 ➜</b> 引入全局变量 <b>Dep.target</b>，让 getter <b>自己</b>把当前正在求值的回调登记进 dep——不需要再手写 addSub。
+</div>
+
+<div class="nav">
+  <a href="./003-defineReactive 抽象成函数.html">← 上一篇 003 · defineReactive 抽象</a>
+  <a href="./005-Dep.target 自动依赖收集.html">下一篇 005 · Dep.target 自动收集 →</a>
+</div>
+
+<script src="./utils.js"></script>
+<script>
+  // ============================================================
+  //  Dep 类：依赖容器（每个响应式属性配一个）
+  // ============================================================
+  class Dep {
+    constructor(name) {
+      this.name = name      // 仅日志可读
+      this.subs = []        // 订阅这个属性的回调
+    }
+    addSub(cb) {
+      this.subs.push(cb)
+      log('track', `dep[${this.name}] +1 订阅，当前共 ${this.subs.length} 个`)
+    }
+    notify() {
+      log('trigger', `dep[${this.name}] 通知 ${this.subs.length} 个订阅者`)
+      this.subs.forEach(cb => cb())
+    }
+  }
+
+  // ============================================================
+  //  defineReactive：每个属性内部"持有"一个 Dep
+  //  setter 时不再直接调 render，而是 dep.notify()
+  // ============================================================
+  function defineReactive(obj, key) {
+    let val = obj[key]
+    const dep = new Dep(key)
+    Object.defineProperty(obj, key, {
+      enumerable: true,
+      configurable: true,
+      get() {
+        return val
+      },
+      set(newVal) {
+        if (newVal === val) return
+        log('info', `setter: ${key} "${val}" -> "${newVal}"`)
+        val = newVal
+        dep.notify()
+      }
+    })
+    return dep   // ← 把 dep 返回出去，方便外部手动 addSub
+  }
+
+  function observe(obj) {
+    const deps = {}
+    Object.keys(obj).forEach(key => {
+      deps[key] = defineReactive(obj, key)
+    })
+    return deps
+  }
+
+  // ============================================================
+  //  使用：手动登记订阅关系
+  // ============================================================
+  const data = {
+    name: 'Alice',
+    age: 18
+  }
+
+  // observe 之后，得到每个属性对应的 dep
+  const deps = observe(data)
+  log('info', '─── data 变成响应式，得到 deps ───')
+
+  // 三个独立的"渲染逻辑"
+  function renderHeader() {
+    document.getElementById('header-name').textContent = data.name
+    log('update', 'renderHeader 执行')
+  }
+  function renderProfileName() {
+    document.getElementById('profile-name').textContent = data.name
+    log('update', 'renderProfileName 执行')
+  }
+  function renderProfileAge() {
+    document.getElementById('profile-age').textContent = data.age
+    log('update', 'renderProfileAge 执行')
+  }
+
+  // ─── 手动建立订阅关系（这里就是繁琐之处）───
+  deps.name.addSub(renderHeader)
+  deps.name.addSub(renderProfileName)
+  deps.age.addSub(renderProfileAge)
+
+  // 初始渲染
+  renderHeader()
+  renderProfileName()
+  renderProfileAge()
+  log('info', '─── 初始化完成（订阅关系是手写的）───')
+
+  window.data = data
+</script>
+
+</body>
+</html>

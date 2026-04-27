@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>013 · deep watch（traverse）</title>
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    .stat {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      background: #f0f0f0;
+      margin-right: 8px;
+      font-family: Menlo, Consolas, monospace;
+    }
+    .stat b { color: #1677ff; font-size: 16px; }
+    .config-view {
+      background: #f5f5f5;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: Menlo, Consolas, monospace;
+      font-size: 13px;
+      white-space: pre;
+    }
+    .mode-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    .mode-tag.bad  { background: #fff1f0; color: #ff4d4f; }
+    .mode-tag.good { background: #f6ffed; color: #52c41a; }
+  </style>
+</head>
+<body>
+
+<h1>⑬ deep watch（traverse 递归触发深层 getter）</h1>
+<p class="intro">
+  我们的 watcher 默认只对"<b>fn 里直接读到的属性</b>"建立依赖。<br>
+  那么这种写法：<br>
+  &nbsp;&nbsp;<code>$watch(() => data.config, cb)</code><br>
+  fn 只读了一次 <code>config</code>（外层），<b>没有读 config 的子属性</b>，<br>
+  所以改 <code>config.theme</code> 时，cb 不会触发——只有把 <code>config</code> 整个替换才会。<br>
+  <br>
+  Vue 的解法是 <b>traverse</b>：<br>
+  &nbsp;&nbsp;在 get() 完成后，如果 watcher 开启了 <code>deep: true</code>，就<br>
+  &nbsp;&nbsp;<b>递归"摸一遍"</b>返回值的所有嵌套属性——每次 ".xxx" 触发的 getter 都会让<br>
+  &nbsp;&nbsp;当前 Dep.target 和这个嵌套的 dep 建立订阅。<br>
+  这相当于"主动手工帮你读一遍每个 key"。
+</p>
+
+<div class="panel">
+  <h2>① 视图区</h2>
+  <div>
+    <span class="stat">cb 触发次数：<b id="cbCount">0</b></span>
+  </div>
+  <div class="config-view" id="cfgView" style="margin-top:8px"></div>
+  <div style="margin-top:8px">
+    <span class="stat">最近一次 cb 收到的描述：<b id="cbInfo">-</b></span>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>② 操作区
+    <span class="mode-tag bad" id="modeBadge">deep OFF</span>
+  </h2>
+  <p class="intro" style="margin-top:0">
+    步骤建议：<br>
+    1️⃣ 先在 <b>deep OFF</b> 下，点"改 theme/locale/嵌套"——cb 不会触发，因为 watcher 只依赖 config 这一层；<br>
+    2️⃣ 切到 <b>deep ON</b>，再点同样的按钮——cb 触发了；<br>
+    3️⃣ 在两种模式下，"替换整个 config 对象"都能触发 cb（因为外层引用变了）。
+  </p>
+  <div class="actions">
+    <button onclick="data.config.theme = data.config.theme === 'light' ? 'dark' : 'light'">改 config.theme（深层）</button>
+    <button onclick="data.config.locale = data.config.locale === 'zh' ? 'en' : 'zh'">改 config.locale（深层）</button>
+    <button onclick="data.config.nested.fontSize++">改 config.nested.fontSize（更深层）</button>
+    <button onclick="data.config = { theme: 'light', locale: 'zh', nested: { fontSize: 14 } }">替换整个 config（外层）</button>
+    <button onclick="toggleDeep()">切换 deep ON/OFF</button>
+    <button onclick="cbCount = 0; document.getElementById('cbCount').textContent = 0; document.getElementById('cbInfo').textContent = '-'">重置计数</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>③ 日志
+    <button class="clear-btn" onclick="clearLog()">清空</button>
+  </h2>
+  <div id="log"></div>
+</div>
+
+<div class="note good">
+  <b>traverse 的核心：</b><br>
+  &nbsp;&nbsp;1. 是数组就遍历每一项；是对象就遍历每个 key；递归下去；<br>
+  &nbsp;&nbsp;2. 用一个 <code>seen</code> 集合记录已访问过的 dep id，避免循环引用导致死循环；<br>
+  &nbsp;&nbsp;3. 跳过冻结对象 / 已标记跳过的对象 / VNode 等。<br>
+  <br>
+  <b>注意：</b>traverse 是个性能"重操作"——每次重新求值都会把整个对象树读一遍。<br>
+  在大对象上滥用 <code>deep: true</code> 会有可见的开销。Vue 3 的 <code>watch</code> 也保留了类似的开关。
+</div>
+<div class="note good">
+  <b>$watch 与 render-watcher 的差异：</b><br>
+  &nbsp;&nbsp;• render-watcher 的 fn 自然会读到模板里所有用到的属性，依赖收集是自动且完备的；<br>
+  &nbsp;&nbsp;• 但 <code>$watch('config', cb)</code> 这种 user watcher 的 fn 只是 <code>() => data.config</code>，<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;只能读到一层——<code>deep: true</code> 就是为这种场景设计的。
+</div>
+<div class="note next">
+  <b>到此为止：</b>我们已经走完 Vue 2.7 <code>src/core/observer/</code> 的所有核心机制：<br>
+  &nbsp;&nbsp;001~007 基本响应式 → 008 数组 → 009 $set/$delete → 010 scheduler → 011 cleanupDeps → 012 lazy/computed → 013 deep watch。<br>
+  对照源码再回看一次，会发现你已经能逐行读懂了。
+</div>
+
+<div class="nav">
+  <a href="./012-lazy watcher（computed 的内核）.html">← 上一篇 012 · lazy watcher</a>
+  <span></span>
+</div>
+
+<script src="./utils.js"></script>
+<script>
+  // ============================================================
+  //  Dep / observe / defineReactive
+  // ============================================================
+  let depUid = 0
+  class Dep {
+    constructor(name) { this.id = ++depUid; this.name = name; this.subs = [] }
+    depend() { if (Dep.target) Dep.target.addDep(this) }
+    addSub(w) { if (!this.subs.includes(w)) this.subs.push(w) }
+    notify() { this.subs.slice().forEach(w => w.update()) }
+  }
+  Dep.target = null
+  const targetStack = []
+  function pushTarget(w) { targetStack.push(w); Dep.target = w }
+  function popTarget() { targetStack.pop(); Dep.target = targetStack[targetStack.length - 1] || null }
+
+  // 简化版 observe（递归处理嵌套对象，不处理数组——本例够用）
+  function observe(v) {
+    if (!v || typeof v !== 'object') return null
+    if (v.__ob__) return v.__ob__
+    const ob = { dep: new Dep('<obj>') }
+    Object.defineProperty(v, '__ob__', { value: ob, enumerable: false, configurable: true, writable: true })
+    Object.keys(v).forEach(k => defineReactive(v, k))
+    return ob
+  }
+  function defineReactive(obj, key) {
+    let val = obj[key]
+    const dep = new Dep(key)
+    let childOb = observe(val)
+    Object.defineProperty(obj, key, {
+      enumerable: true, configurable: true,
+      get() {
+        dep.depend()
+        if (childOb) childOb.dep.depend()
+        return val
+      },
+      set(newVal) {
+        if (newVal === val) return
+        val = newVal
+        childOb = observe(newVal)
+        dep.notify()
+      }
+    })
+  }
+
+  // ============================================================
+  //  ★ traverse：递归"读"一遍，触发所有嵌套 getter
+  // ============================================================
+  const seenObjects = new Set()
+  function traverse(val) {
+    _traverse(val, seenObjects)
+    seenObjects.clear()
+  }
+  function _traverse(val, seen) {
+    if (!val || typeof val !== 'object' || Object.isFrozen(val)) return
+    // 用 dep.id 防止循环引用导致死循环
+    if (val.__ob__) {
+      const depId = val.__ob__.dep.id
+      if (seen.has(depId)) return
+      seen.add(depId)
+    }
+    if (Array.isArray(val)) {
+      let i = val.length
+      while (i--) _traverse(val[i], seen)
+    } else {
+      const keys = Object.keys(val)
+      let i = keys.length
+      while (i--) _traverse(val[keys[i]], seen)
+    }
+  }
+
+  // ============================================================
+  //  Watcher：支持 deep / user
+  // ============================================================
+  let watcherUid = 0
+  class Watcher {
+    constructor(fn, cb, options = {}) {
+      this.id = ++watcherUid
+      this.fn = fn
+      this.cb = cb
+      this.deep = !!options.deep
+      this.user = !!options.user
+      this.deps = []
+      this.value = this.get()
+    }
+    addDep(d) { if (!this.deps.includes(d)) { this.deps.push(d); d.addSub(this) } }
+    get() {
+      pushTarget(this)
+      let value
+      try {
+        value = this.fn()
+        // ★ 关键：如果 deep，求值后递归"摸"一遍，让所有嵌套 getter 都建立依赖
+        if (this.deep) {
+          log('info', `★ deep watcher#${this.id}: 调 traverse 递归触发深层 getter`)
+          traverse(value)
+        }
+      } finally {
+        popTarget()
+      }
+      return value
+    }
+    update() {
+      const oldValue = this.value
+      this.value = this.get()
+      if (this.user && (oldValue !== this.value || this.deep)) {
+        log('update', `★ user watcher#${this.id} 触发 cb`)
+        this.cb(this.value, oldValue)
+      }
+    }
+  }
+
+  // ============================================================
+  //  $watch：方便创建 user-watcher
+  // ============================================================
+  function $watch(getter, cb, options = {}) {
+    return new Watcher(getter, cb, { ...options, user: true })
+  }
+
+  // ============================================================
+  //  使用
+  // ============================================================
+  const data = {
+    config: {
+      theme: 'light',
+      locale: 'zh',
+      nested: { fontSize: 14 }
+    }
+  }
+  observe(data)
+
+  // 一个 render watcher 把当前 config 显示出来（普通 watcher，不是 user）
+  new Watcher(() => {
+    document.getElementById('cfgView').textContent = JSON.stringify(data.config, null, 2)
+  }, null, {})
+
+  // ★ 重点：一个 user watcher，监听 data.config
+  let cbCount = 0
+  let deepOn = false
+  let myWatcher = null
+
+  function rebuildWatcher() {
+    if (myWatcher) {
+      // 简单清理：从 deps 移除
+      myWatcher.deps.forEach(d => {
+        const i = d.subs.indexOf(myWatcher)
+        if (i > -1) d.subs.splice(i, 1)
+      })
+    }
+    myWatcher = $watch(() => data.config, (newVal, oldVal) => {
+      cbCount++
+      document.getElementById('cbCount').textContent = cbCount
+      document.getElementById('cbInfo').textContent =
+        `第 ${cbCount} 次：${typeof newVal === 'object' ? JSON.stringify(newVal) : newVal}`
+    }, { deep: deepOn })
+
+    log('info', `── (重建) 监听 data.config，deep=${deepOn} ──`)
+  }
+  rebuildWatcher()
+
+  function toggleDeep() {
+    deepOn = !deepOn
+    const badge = document.getElementById('modeBadge')
+    badge.textContent = deepOn ? 'deep ON' : 'deep OFF'
+    badge.className = 'mode-tag ' + (deepOn ? 'good' : 'bad')
+    rebuildWatcher()
+  }
+
+  window.data = data
+  window.toggleDeep = toggleDeep
+</script>
+
+</body>
+</html>
